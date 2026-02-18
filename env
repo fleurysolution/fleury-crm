@@ -16,11 +16,13 @@ security.tokenRandomize = true
 security.regenerate = true
 security.redirect = true
 
-session.driver = CodeIgniter\Session\Handlers\DatabaseHandler
+#session.driver = CodeIgniter\Session\Handlers\DatabaseHandler
+session.driver = CodeIgniter\Session\Handlers\FileHandler
+
 session.cookieName = crmcore_session
 session.expiration = 7200
 session.matchIP = false
 session.timeToUpdate = 300
 session.regenerateDestroy = true
-session.savePath = fs_as_ci_sessions
+#session.savePath = fs_as_ci_sessions
 
