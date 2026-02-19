@@ -43,10 +43,21 @@ class AuthService
         }
 
         session()->regenerate(true);
+
+        // Fetch User Roles & Permissions
+        $roles = $this->users->getRoles((int) $user['id']);
+        $permissions = $this->users->getPermissions((int) $user['id']);
+
+        // Flatten permissions to simple array of slugs
+        $permissionSlugs = array_column($permissions, 'slug');
+        $roleSlugs = array_column($roles, 'slug');
+
         session()->set([
             'user_id'      => (int) $user['id'],
             'user_email'   => $user['email'],
             'user_name'    => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
+            'user_roles'   => $roleSlugs,
+            'user_permissions' => $permissionSlugs,
             'is_logged_in' => true,
         ]);
 

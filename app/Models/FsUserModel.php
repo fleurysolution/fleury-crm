@@ -31,4 +31,34 @@ class FsUserModel extends Model
     protected $createdField   = 'created_at';
     protected $updatedField   = 'updated_at';
     protected $deletedField   = 'deleted_at';
+
+    /**
+     * Get roles associated with the user.
+     */
+    public function getRoles(int $userId): array
+    {
+        $db = \Config\Database::connect();
+        return $db->table('user_roles')
+            ->select('roles.*')
+            ->join('roles', 'roles.id = user_roles.role_id')
+            ->where('user_roles.user_id', $userId)
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Get all permissions associated with the user (via roles).
+     */
+    public function getPermissions(int $userId): array
+    {
+        $db = \Config\Database::connect();
+        return $db->table('user_roles')
+            ->select('permissions.slug')
+            ->join('role_permissions', 'role_permissions.role_id = user_roles.role_id')
+            ->join('permissions', 'permissions.id = role_permissions.permission_id')
+            ->where('user_roles.user_id', $userId)
+            ->distinct()
+            ->get()
+            ->getResultArray();
+    }
 }

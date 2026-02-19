@@ -36,7 +36,7 @@ class Auth extends BaseController
                 ->with('errors', $result['errors']);
         }
 
-        return redirect()->to(site_url('/'));
+        return redirect()->to(site_url('dashboard'));
     }
 
     public function signout(): RedirectResponse
