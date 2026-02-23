@@ -1,0 +1,146 @@
+<?php
+
+namespace App\Controllers;
+
+use CodeIgniter\Controller;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
+
+use App\Libraries\Template;
+use App\Models\FsSettingsModel;
+use App\Models\FsUserModel;
+
+class BaseAppController extends Controller
+{
+    protected Template $template;
+    protected \CodeIgniter\Session\Session $session;
+    protected \CodeIgniter\Validation\Validation $validation;
+    protected \CodeIgniter\View\Parser $parser;
+
+    // “global” models only (keep this very small)
+    protected FsSettingsModel $settingsModel;
+    protected FsUserModel $usersModel;
+
+    // shared state
+    protected ?object $loginUser = null;        // replace with entity type later if you use Entities
+    protected array $appSettings = [];
+
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
+    {
+        parent::initController($request, $response, $logger);
+
+        // services
+        $this->session    = service('session');
+        $this->validation = service('validation');
+        $this->parser     = service('parser');
+
+        // helpers (keep to essentials; move module helpers into those modules)
+        helper(['url', 'form', 'cookie', 'i18n']);
+
+        // template/layout
+        $this->template = new Template();
+
+        // models (ONLY the ones needed for global bootstrapping)
+        $this->settingsModel = model(FsSettingsModel::class);
+        $this->usersModel    = model(FsUserModel::class);
+
+        // bootstrap “app prerequisites”
+        $this->bootstrapUserAndSettings();
+        $this->bootstrapLocale();
+        $this->maybeRedirectLandingPage();
+    }
+
+    protected function bootstrapUserAndSettings(): void
+    {
+        $loginUserId = $this->usersModel->login_user_id(); // keep your existing method for now
+
+        if ($loginUserId) {
+            $this->loginUser = $this->usersModel->get_one($loginUserId);
+
+            // settings can be user-specific
+            $settings = $this->settingsModel->get_all_required_settings($loginUserId)->getResult();
+        } else {
+            // settings without user context (optional)
+            $settings = $this->settingsModel->get_all_required_settings(null)->getResult();
+        }
+
+        foreach ($settings as $s) {
+            $this->appSettings[$s->setting_name] = $s->setting_value;
+        }
+
+        // If you still want config('Fs')->app_settings_array
+        // keep it, but do it once here:
+        config('Fs')->app_settings_array = $this->appSettings;
+    }
+
+    protected function bootstrapLocale(): void
+    {
+        // Your new priority order should be in one place.
+        // For now mirror old behavior: user language else setting('language')
+        $language = $this->loginUser->language ?? ($this->appSettings['language'] ?? 'en');
+
+        // If you moved to fs_users.locale, swap to ->locale and your cookie logic.
+        service('request')->setLocale($language);
+    }
+
+    protected function maybeRedirectLandingPage(): void
+    {
+        $landingPage = $this->appSettings['landing_page'] ?? null;
+
+        if ($landingPage && $this->isCurrentUrlSameAsBaseUrl()) {
+            // CI4-friendly redirect:
+            redirect()->to($landingPage)->send();
+            exit;
+        }
+    }
+
+    protected function isCurrentUrlSameAsBaseUrl(): bool
+    {
+        $cleanCurrentUrl = str_replace('index.php/', '', current_url());
+        return $cleanCurrentUrl === base_url();
+    }
+
+    /**
+     * CI4-friendly validation wrapper similar to your old validate_submitted_data()
+     */
+    protected function validateSubmitted(array $rules, bool $returnErrors = false, bool $jsonResponse = true)
+    {
+        // Add permit_empty automatically when not required
+        $final = [];
+        foreach ($rules as $field => $rule) {
+            if (strpos($rule, 'required') === false) {
+                $rule .= '|permit_empty';
+            }
+            $final[$field] = $rule;
+        }
+
+        if (! $final) {
+            return true;
+        }
+
+        if (! $this->validate($final)) {
+            $errors = $this->validator->getErrors();
+
+            if ($returnErrors) {
+                return $errors;
+            }
+
+            if ($jsonResponse) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => $errors,
+                ])->send();
+            }
+
+            // non-json error page
+            echo view('errors/html/error_general', [
+                'heading' => '400 Bad Request',
+                'message' => t('something_went_wrong'),
+            ]);
+            exit;
+        }
+
+        return true;
+    }
+}

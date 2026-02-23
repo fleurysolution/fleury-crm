@@ -93,3 +93,28 @@ $routes->group('invoices', ['filter' => 'auth'], function ($routes) {
     $routes->post('(:num)/payment', 'Invoices::add_payment/$1');
 });
 
+$routes->get('about/(:segment)', 'About::index/$1');
+
+$routes->group('settings/branches', ['namespace' => 'App\Controllers'], function($routes) {
+    // Pages
+    $routes->get('regions', 'BranchSettings::regions');
+    $routes->get('offices', 'BranchSettings::offices');   // branches page
+    $routes->get('divisions', 'BranchSettings::divisions');
+
+    // Region CRUD
+    $routes->post('regions/save', 'BranchSettings::saveRegion');
+    $routes->post('regions/delete/(:num)', 'BranchSettings::deleteRegion/$1');
+    $routes->get('regions/get/(:num)', 'BranchSettings::getRegion/$1');
+
+    // Office CRUD + lookup
+    $routes->post('offices/save', 'BranchSettings::saveOffice');
+    $routes->post('offices/delete/(:num)', 'BranchSettings::deleteOffice/$1');
+    $routes->get('offices/get/(:num)', 'BranchSettings::getOffice/$1');
+    $routes->get('offices/by-region/(:num)', 'BranchSettings::officesByRegion/$1');
+
+    // Division CRUD + lookup
+    $routes->post('divisions/save', 'BranchSettings::saveDivision');
+    $routes->post('divisions/delete/(:num)', 'BranchSettings::deleteDivision/$1');
+    $routes->get('divisions/get/(:num)', 'BranchSettings::getDivision/$1');
+    $routes->get('divisions/by-office/(:num)', 'BranchSettings::divisionsByOffice/$1');
+});
