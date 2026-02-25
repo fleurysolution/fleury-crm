@@ -170,7 +170,181 @@ $routes->group('settings', ['filter' => 'permission:manage_settings'], function 
     $routes->get('branches/divisions/by-office/(:num)',     'BranchSettings::divisionsByOffice/$1');
 });
 
-// Leads Management
+// ── Projects, Tasks, Areas ─────────────────────────────────────────────────
+$routes->group('projects', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/',                            'Projects::index');
+    $routes->get('create',                       'Projects::create');
+    $routes->post('store',                       'Projects::store');
+    $routes->get('(:num)',                       'Projects::show/$1');
+    $routes->get('(:num)/edit',                  'Projects::edit/$1');
+    $routes->post('(:num)/update',               'Projects::update/$1');
+    $routes->post('(:num)/archive',              'Projects::archive/$1');
+
+    // Per-project sub-resources
+    $routes->post('(:num)/tasks',                'Tasks::store/$1');
+    $routes->get('(:num)/tasks',                 'Tasks::index/$1');
+    $routes->get('(:num)/kanban',                'Tasks::kanban/$1');
+    $routes->get('(:num)/members',               'Projects::members/$1');
+    $routes->post('(:num)/members',              'Projects::addMember/$1');
+    $routes->get('(:num)/areas',                 'Areas::index/$1');
+    $routes->post('(:num)/areas',                'Areas::store/$1');
+    $routes->post('(:num)/phases',               'Projects::storePhase/$1');
+    $routes->post('(:num)/milestones',           'Projects::storeMilestone/$1');
+});
+
+// Tasks — global AJAX endpoints
+$routes->get('tasks/(:num)',                     'Tasks::show/$1',    ['filter' => 'auth']);
+$routes->post('tasks/(:num)/update',             'Tasks::update/$1',  ['filter' => 'auth']);
+$routes->post('tasks/(:num)/move',               'Tasks::move/$1',    ['filter' => 'auth']);
+$routes->post('tasks/(:num)/comment',            'Tasks::comment/$1', ['filter' => 'auth']);
+$routes->post('tasks/(:num)/upload',             'Tasks::upload/$1',  ['filter' => 'auth']);
+$routes->post('tasks/(:num)/checklist',          'Tasks::checklist/$1', ['filter' => 'auth']);
+$routes->post('tasks/(:num)/delete',             'Tasks::delete/$1',  ['filter' => 'auth']);
+
+// Areas — global AJAX endpoints
+$routes->post('areas/(:num)/update',             'Areas::update/$1',  ['filter' => 'auth']);
+$routes->post('areas/(:num)/delete',             'Areas::delete/$1',  ['filter' => 'auth']);
+
+// Milestones — global AJAX endpoints
+$routes->post('milestones/(:num)/update',        'Projects::updateMilestone/$1', ['filter' => 'auth']);
+
+// ── Gantt ───────────────────────────────────────────────────────────────────
+$routes->get('projects/(:num)/gantt/data',       'Gantt::data/$1',        ['filter' => 'auth']);
+$routes->post('tasks/(:num)/gantt-update',        'Gantt::updateDates/$1', ['filter' => 'auth']);
+
+// ── Timesheets ──────────────────────────────────────────────────────────────
+$routes->group('timesheets', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/',                   'Timesheets::index');
+    $routes->get('all',                 'Timesheets::all');
+    $routes->get('create',              'Timesheets::create');
+    $routes->post('store',              'Timesheets::store');
+    $routes->get('(:num)',              'Timesheets::show/$1');
+    $routes->post('(:num)/save',        'Timesheets::save/$1');
+    $routes->post('(:num)/submit',      'Timesheets::submit/$1');
+    $routes->post('(:num)/approve',     'Timesheets::approve/$1');
+    $routes->post('(:num)/reject',      'Timesheets::reject/$1');
+    $routes->get('(:num)/export',       'Timesheets::export/$1');
+});
+
+// ── RFIs ─────────────────────────────────────────────────────────────────────
+$routes->post('projects/(:num)/rfis',          'RFIs::store/$1',         ['filter' => 'auth']);
+$routes->get('rfis/(:num)',                     'RFIs::show/$1',          ['filter' => 'auth']);
+$routes->post('rfis/(:num)/respond',            'RFIs::respond/$1',       ['filter' => 'auth']);
+$routes->post('rfis/(:num)/status',             'RFIs::updateStatus/$1',  ['filter' => 'auth']);
+$routes->post('rfis/(:num)/delete',             'RFIs::delete/$1',        ['filter' => 'auth']);
+$routes->get('rfis/(:num)/export',              'RFIs::export/$1',        ['filter' => 'auth']);
+$routes->get('projects/(:num)/rfis',            'RFIs::index/$1',         ['filter' => 'auth']);
+
+// ── Submittals ────────────────────────────────────────────────────────────────
+$routes->post('projects/(:num)/submittals',     'Submittals::store/$1',   ['filter' => 'auth']);
+$routes->get('submittals/(:num)',               'Submittals::show/$1',    ['filter' => 'auth']);
+$routes->post('submittals/(:num)/review',       'Submittals::review/$1',  ['filter' => 'auth']);
+$routes->post('submittals/(:num)/delete',       'Submittals::delete/$1',  ['filter' => 'auth']);
+$routes->get('projects/(:num)/submittals',      'Submittals::index/$1',   ['filter' => 'auth']);
+
+// ── Punch List ────────────────────────────────────────────────────────────────
+$routes->post('projects/(:num)/punch-list',               'PunchList::store/$1',        ['filter' => 'auth']);
+$routes->get('projects/(:num)/punch-list',                'PunchList::index/$1',        ['filter' => 'auth']);
+$routes->get('projects/(:num)/punch-list/export',         'PunchList::exportCsv/$1',    ['filter' => 'auth']);
+$routes->post('punch-list/(:num)/status',                 'PunchList::updateStatus/$1', ['filter' => 'auth']);
+$routes->post('punch-list/(:num)/resolve',                'PunchList::resolve/$1',      ['filter' => 'auth']);
+$routes->post('punch-list/(:num)/close',                  'PunchList::close/$1',        ['filter' => 'auth']);
+$routes->post('punch-list/(:num)/delete',                 'PunchList::delete/$1',       ['filter' => 'auth']);
+
+// ── Site Diary ────────────────────────────────────────────────────────────────
+$routes->get('projects/(:num)/site-diary',                'SiteDiary::index/$1',        ['filter' => 'auth']);
+$routes->get('projects/(:num)/site-diary/create',         'SiteDiary::create/$1',       ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary',               'SiteDiary::store/$1',        ['filter' => 'auth']);
+$routes->get('projects/(:num)/site-diary/(:num)',          'SiteDiary::show/$1/$2',      ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary/(:num)/update',  'SiteDiary::update/$1/$2',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary/(:num)/submit',  'SiteDiary::submit/$1/$2',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary/(:num)/approve', 'SiteDiary::approve/$1/$2',   ['filter' => 'auth']);
+
+// ── Contracts ─────────────────────────────────────────────────────────────────
+$routes->get('projects/(:num)/contracts',              'Contracts::index/$1',           ['filter' => 'auth']);
+$routes->post('projects/(:num)/contracts',             'Contracts::store/$1',           ['filter' => 'auth']);
+$routes->get('contracts/(:num)',                       'Contracts::show/$1',            ['filter' => 'auth']);
+$routes->post('contracts/(:num)/status',               'Contracts::updateStatus/$1',    ['filter' => 'auth']);
+$routes->post('contracts/(:num)/amend',                'Contracts::amend/$1',           ['filter' => 'auth']);
+$routes->post('contracts/amendments/(:num)/approve',   'Contracts::approveAmendment/$1',['filter' => 'auth']);
+$routes->post('contracts/(:num)/delete',               'Contracts::delete/$1',          ['filter' => 'auth']);
+
+// ── BOQ ──────────────────────────────────────────────────────────────────────
+$routes->get('projects/(:num)/boq',                    'BOQ::index/$1',      ['filter' => 'auth']);
+$routes->post('projects/(:num)/boq',                   'BOQ::save/$1',       ['filter' => 'auth']);
+$routes->get('projects/(:num)/boq/export',             'BOQ::exportCsv/$1',  ['filter' => 'auth']);
+$routes->post('boq/(:num)/delete',                     'BOQ::delete/$1',     ['filter' => 'auth']);
+
+// ── Finance ──────────────────────────────────────────────────────────────────
+$routes->get('projects/(:num)/finance',                'Finance::index/$1',           ['filter' => 'auth']);
+$routes->get('projects/(:num)/finance/export',         'Finance::exportCsv/$1',       ['filter' => 'auth']);
+$routes->post('projects/(:num)/finance/certs',         'Finance::storeCert/$1',       ['filter' => 'auth']);
+$routes->post('finance/certs/(:num)/approve',          'Finance::approveCert/$1',     ['filter' => 'auth']);
+$routes->post('finance/certs/(:num)/mark-paid',        'Finance::markCertPaid/$1',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/finance/invoices',      'Finance::storeInvoice/$1',    ['filter' => 'auth']);
+$routes->post('finance/invoices/(:num)/mark-paid',     'Finance::markInvoicePaid/$1', ['filter' => 'auth']);
+$routes->post('projects/(:num)/finance/expenses',      'Finance::storeExpense/$1',    ['filter' => 'auth']);
+$routes->post('finance/expenses/(:num)/approve',       'Finance::approveExpense/$1',  ['filter' => 'auth']);
+
+// ── Reports & Dashboard ────────────────────────────────────────────────────────
+$routes->get('reports',                               'Reports::index',              ['filter' => 'auth']);
+$routes->get('reports/json',                          'Reports::executiveJson',      ['filter' => 'auth']);
+$routes->get('projects/(:num)/report',                'Reports::project/$1',         ['filter' => 'auth']);
+$routes->get('projects/(:num)/report/json',           'Reports::projectJson/$1',     ['filter' => 'auth']);
+$routes->get('projects/(:num)/report/print',          'Reports::exportPrint/$1',     ['filter' => 'auth']);
+
+// ── Notifications ────────────────────────────────────────────────────────────
+$routes->get('notifications',               'Notifications::index',    ['filter' => 'auth']);
+$routes->get('notifications/dropdown',      'Notifications::dropdown', ['filter' => 'auth']);
+$routes->get('notifications/count',         'Notifications::count',    ['filter' => 'auth']);
+$routes->post('notifications/read-all',     'Notifications::readAll',  ['filter' => 'auth']);
+$routes->post('notifications/(:num)/read',  'Notifications::markRead/$1', ['filter' => 'auth']);
+
+// ── Activity Log ───────────────────────────────────────────────────────────
+$routes->get('activity',                    'ActivityLog::index',      ['filter' => 'auth']);
+$routes->get('projects/(:num)/activity',    'ActivityLog::forProject/$1', ['filter' => 'auth']);
+
+// ── Users Management ───────────────────────────────────────────────────────
+$routes->get('users',                         'Users::index',           ['filter' => 'auth']);
+$routes->get('users/create',                  'Users::create',          ['filter' => 'auth']);
+$routes->post('users/store',                  'Users::store',           ['filter' => 'auth']);
+$routes->get('users/(:num)',                  'Users::show/$1',         ['filter' => 'auth']);
+$routes->post('users/(:num)/update',          'Users::update/$1',       ['filter' => 'auth']);
+$routes->post('users/(:num)/password',        'Users::changePassword/$1', ['filter' => 'auth']);
+$routes->post('users/(:num)/toggle-status',   'Users::toggleStatus/$1', ['filter' => 'auth']);
+$routes->post('users/(:num)/delete',          'Users::delete/$1',       ['filter' => 'auth']);
+
+// ── My Profile ──────────────────────────────────────────────────────────────
+$routes->get('profile',                       'Users::profile',         ['filter' => 'auth']);
+$routes->post('profile/update',               'Users::updateProfile',   ['filter' => 'auth']);
+$routes->post('profile/password',             'Users::changeOwnPassword', ['filter' => 'auth']);
+
+// ── Construction Settings ───────────────────────────────────────────────────
+$routes->get('settings/construction',         'Settings::construction', ['filter' => 'auth']);
+$routes->post('settings/construction/save',   'Settings::saveConstruction', ['filter' => 'auth']);
+
+// ── Calendar & Scheduling ──────────────────────────────────────────────────
+$routes->get('calendar',                            'Calendar::index',              ['filter' => 'auth']);
+$routes->get('calendar/events',                     'Calendar::events',             ['filter' => 'auth']);
+$routes->post('calendar/events',                    'Calendar::store',              ['filter' => 'auth']);
+$routes->post('calendar/events/(:num)/update',      'Calendar::update/$1',          ['filter' => 'auth']);
+$routes->post('calendar/events/(:num)/delete',      'Calendar::delete/$1',          ['filter' => 'auth']);
+$routes->post('calendar/events/(:num)/drag',        'Calendar::drag/$1',            ['filter' => 'auth']);
+
+// ── File Manager ───────────────────────────────────────────────────────────
+$routes->get('files',                               'FileManager::index',           ['filter' => 'auth']);
+$routes->get('files/(:num)/download',               'FileManager::download/$1',     ['filter' => 'auth']);
+$routes->post('files/(:num)/delete',                'FileManager::delete/$1',       ['filter' => 'auth']);
+$routes->post('files/(:num)/update',                'FileManager::update/$1',       ['filter' => 'auth']);
+$routes->get('projects/(:num)/files',               'FileManager::forProject/$1',   ['filter' => 'auth']);
+$routes->post('projects/(:num)/files/upload',       'FileManager::upload/$1',       ['filter' => 'auth']);
+
+// ── Comments ────────────────────────────────────────────────────────────────
+$routes->get('comments',                            'Comments::index',              ['filter' => 'auth']);
+$routes->post('comments',                           'Comments::store',              ['filter' => 'auth']);
+$routes->post('comments/(:num)/delete',             'Comments::delete/$1',          ['filter' => 'auth']);
+$routes->post('comments/(:num)/update',             'Comments::update/$1',          ['filter' => 'auth']);
+
 $routes->group('leads', ['filter' => 'auth'], function ($routes) {
     $routes->get('/', 'Leads::index');
     $routes->get('kanban', 'Leads::kanban');

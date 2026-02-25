@@ -61,4 +61,22 @@ class FsUserModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    /**
+     * Compatibility: Get the currently logged in user ID from session.
+     */
+    public function login_user_id(): ?int
+    {
+        return session()->get('user_id');
+    }
+
+    /**
+     * Compatibility: Get one user by ID.
+     */
+    public function get_one(int $id): ?object
+    {
+        // Return as object to match BaseAppController expectations
+        $row = $this->find($id);
+        return $row ? (object)$row : null;
+    }
 }

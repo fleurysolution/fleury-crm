@@ -48,6 +48,30 @@
                class="sidebar-link <?= str_starts_with($uri, 'clients') ? 'active' : '' ?>">
                 <i class="fa-solid fa-building"></i> Clients
             </a>
+            <a href="<?= site_url('projects') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'projects') ? 'active' : '' ?>">
+                <i class="fa-solid fa-layer-group"></i> Projects
+            </a>
+            <a href="<?= site_url('timesheets') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'timesheets') ? 'active' : '' ?>">
+                <i class="fa-solid fa-clock"></i> Timesheets
+            </a>
+            <a href="<?= site_url('reports') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'reports') ? 'active' : '' ?>">
+                <i class="fa-solid fa-chart-column"></i> Reports
+            </a>
+            <a href="<?= site_url('activity') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'activity') ? 'active' : '' ?>">
+                <i class="fa-solid fa-clock-rotate-left"></i> Activity Log
+            </a>
+            <a href="<?= site_url('files') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'files') ? 'active' : '' ?>">
+                <i class="fa-solid fa-folder-open"></i> Files
+            </a>
+            <a href="<?= site_url('calendar') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'calendar') ? 'active' : '' ?>">
+                <i class="fa-solid fa-calendar-days"></i> Calendar
+            </a>
 
             <div class="sidebar-category">Finance</div>
             <a href="<?= site_url('estimates') ?>"
@@ -60,6 +84,14 @@
             </a>
 
             <div class="sidebar-category">Management</div>
+            <a href="<?= site_url('users') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'users') ? 'active' : '' ?>">
+                <i class="fa-solid fa-users"></i> Users
+            </a>
+            <a href="<?= site_url('profile') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'profile') ? 'active' : '' ?>">
+                <i class="fa-solid fa-circle-user"></i> My Profile
+            </a>
             <a href="<?= site_url('team') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'team') ? 'active' : '' ?>">
                 <i class="fa-solid fa-users"></i> Team
@@ -80,6 +112,10 @@
             <a href="<?= site_url('settings/general') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'settings') ? 'active' : '' ?>">
                 <i class="fa-solid fa-sliders"></i> Settings
+            </a>
+            <a href="<?= site_url('settings/construction') ?>"
+               class="sidebar-link <?= ($uri === 'settings/construction') ? 'active' : '' ?>">
+                <i class="fa-solid fa-building-columns"></i> Construction
             </a>
 
         </nav>
@@ -109,8 +145,9 @@
                 <h2 class="topbar-title mb-0"><?= esc($title ?? 'Dashboard') ?></h2>
             </div>
 
-            <div class="user-menu">
+            <div class="user-menu d-flex align-items-center gap-1">
                 <?php if (session()->get('is_logged_in')): ?>
+                <?= view('layouts/partials/bell_dropdown') ?>
                 <span class="d-none d-md-inline text-muted" style="font-size:.875rem;">
                     <?= esc(session()->get('user_name') ?: session()->get('user_email')) ?>
                 </span>

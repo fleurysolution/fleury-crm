@@ -23,8 +23,9 @@ class BaseAppController extends Controller
     protected FsUserModel $usersModel;
 
     // shared state
-    protected ?object $loginUser = null;        // replace with entity type later if you use Entities
-    protected array $appSettings = [];
+    protected ?object $loginUser   = null;      // Object version for newer code
+    protected array   $currentUser = [];        // Legacy array version (for compatibility)
+    protected array   $appSettings = [];
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
@@ -56,7 +57,21 @@ class BaseAppController extends Controller
         $loginUserId = $this->usersModel->login_user_id(); // keep your existing method for now
 
         if ($loginUserId) {
-            $this->loginUser = $this->usersModel->get_one($loginUserId);
+            $this->loginUser   = $this->usersModel->get_one($loginUserId);
+            $this->currentUser = (array)$this->loginUser;
+
+            // Ensure session user_name and user['name'] is correct after schema migration
+            $fullName = trim(($this->loginUser->first_name ?? '') . ' ' . ($this->loginUser->last_name ?? ''));
+            if ($fullName) {
+                if (session()->get('user_name') !== $fullName) {
+                    session()->set('user_name', $fullName);
+                }
+                $sessUser = session()->get('user');
+                if (is_array($sessUser) && ($sessUser['name'] ?? '') !== $fullName) {
+                    $sessUser['name'] = $fullName;
+                    session()->set('user', $sessUser);
+                }
+            }
 
             // settings can be user-specific
             $settings = $this->settingsModel->get_all_required_settings($loginUserId)->getResult();
@@ -70,15 +85,17 @@ class BaseAppController extends Controller
         }
 
         // If you still want config('Fs')->app_settings_array
-        // keep it, but do it once here:
-        config('Fs')->app_settings_array = $this->appSettings;
+        // keep it, but do it once here (if the config exists):
+        if ($fsConfig = config('Fs')) {
+            $fsConfig->app_settings_array = $this->appSettings;
+        }
     }
 
     protected function bootstrapLocale(): void
     {
         // Your new priority order should be in one place.
         // For now mirror old behavior: user language else setting('language')
-        $language = $this->loginUser->language ?? ($this->appSettings['language'] ?? 'en');
+        $language = $this->loginUser?->language ?? ($this->appSettings['language'] ?? 'en');
 
         // If you moved to fs_users.locale, swap to ->locale and your cookie logic.
         service('request')->setLocale($language);
@@ -99,6 +116,19 @@ class BaseAppController extends Controller
     {
         $cleanCurrentUrl = str_replace('index.php/', '', current_url());
         return $cleanCurrentUrl === base_url();
+    }
+
+    /**
+     * Compatibility wrapper for rendering views.
+     */
+    protected function render(string $view, array $data = []): string
+    {
+        // Inject global variables that views might expect
+        $data['login_user']  = $this->loginUser;
+        $data['currentUser'] = $this->currentUser;
+        $data['appSettings'] = $this->appSettings;
+
+        return view($view, $data);
     }
 
     /**

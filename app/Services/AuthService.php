@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FsPasswordResetTokenModel;
 use App\Models\FsUserModel;
+use App\Services\EmailService;
 
 class AuthService
 {
@@ -97,14 +98,22 @@ class AuthService
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // TODO: Integrate actual email sender
-        // Example reset URL:
-        // $url = site_url('auth/password/reset/' . $rawToken);
+        // Send password reset email
+        $resetUrl = site_url('auth/password/reset/' . $rawToken);
+        
+        $emailSent = EmailService::sendPasswordReset($email, $resetUrl);
+        
+        if (!$emailSent) {
+            log_message('error', 'Failed to send password reset email to: ' . $email);
+            return [
+                'success' => true,
+                'message' => 'If the account exists, a reset link has been sent to your email.',
+            ];
+        }
 
         return [
             'success' => true,
-            'message' => 'Reset link generated. (Email integration pending)',
-            'token'   => $rawToken, // remove in production response
+            'message' => 'If the account exists, a reset link has been sent to your email.',
         ];
     }
 

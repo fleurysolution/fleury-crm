@@ -7,6 +7,7 @@ use App\Models\NotificationSettingModel;
 use App\Models\RoleModel;
 use App\Models\PermissionModel;
 use App\Models\FsRoleModel;
+use App\Services\EmailService;
 
 /**
  * Settings Controller – full CI4 refactor of old Settings.php
@@ -100,7 +101,16 @@ class Settings extends BaseController
 
         $testTo = $this->request->getPost('send_test_mail_to');
         if ($testTo) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Settings saved. Test email feature requires mail library setup.']);
+            $subject = 'Test Email from BPMS247';
+            $message = 'This is a test email to verify your email settings are working correctly.';
+            
+            $sent = EmailService::send($testTo, $subject, $message);
+            
+            if ($sent) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Test email sent successfully to ' . $testTo]);
+            } else {
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to send test email. Please check your SMTP settings.']);
+            }
         }
 
         return $this->response->setJSON(['success' => true, 'message' => 'Email settings saved.']);
@@ -1080,5 +1090,36 @@ class Settings extends BaseController
         }
 
         return redirect()->back()->with('message', 'Settings saved successfully.');
+    }
+
+    // =========================================================================
+    // CONSTRUCTION SETTINGS
+    // =========================================================================
+
+    public function construction(): string
+    {
+        $db       = \Config\Database::connect();
+        $settings = $db->table('construction_settings')->get()->getResultArray();
+
+        return view('settings/construction', [
+            'title'    => 'Construction Settings',
+            'tab'      => 'construction',
+            'settings' => $settings,
+        ]);
+    }
+
+    public function saveConstruction(): \CodeIgniter\HTTP\Response
+    {
+        $db   = \Config\Database::connect();
+        $post = $this->request->getPost();
+
+        foreach ($post as $key => $value) {
+            if (in_array($key, [csrf_token(), 'setting_group'])) continue;
+            $db->table('construction_settings')
+                ->where('key', $key)
+                ->update(['value' => $value ?? '', 'updated_at' => date('Y-m-d H:i:s')]);
+        }
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Construction settings saved.']);
     }
 }
