@@ -2,23 +2,22 @@
 <?= $this->section('settings_content') ?>
 
 <div class="d-flex align-items-center gap-2 mb-4">
-    <div class="settings-icon-badge"><i class="fa-solid fa-user-lock text-primary fa-lg"></i></div>
+    <div class="settings-icon-badge"><i class="fa-solid fa-store text-primary fa-lg"></i></div>
     <div>
-        <h5 class="fw-bold mb-0">Client Permissions</h5>
-        <small class="text-muted">Control what clients can access and do</small>
+        <h5 class="fw-bold mb-0">Store Settings</h5>
+        <small class="text-muted">Online store access and checkout options</small>
     </div>
 </div>
 
-<?= form_open('settings/save_client_settings', ['class' => 'settings-ajax-form']) ?>
-<input type="hidden" name="setting_group" value="client">
+<?= form_open('settings/save_store_settings', ['class' => 'settings-ajax-form']) ?>
+<input type="hidden" name="setting_group" value="store">
 
-<div class="settings-section-hdr">Client Portal Access</div>
+<div class="settings-section-hdr">Access & Visibility</div>
 <div class="border rounded-3 px-3 py-1 bg-white">
     <?php $toggles = [
-        ['name'=>'disable_client_login',    'label'=>'Disable Client Login',         'desc'=>'Prevent all clients from logging into the client portal'],
-        ['name'=>'disable_client_signup',   'label'=>'Disable Client Registration',  'desc'=>'Prevent new clients from self-registering'],
-        ['name'=>'client_can_create_projects','label'=>'Clients Can Create Projects','desc'=>'Allow clients to create new projects in the portal'],
-        ['name'=>'client_can_view_tasks',   'label'=>'Clients Can View Tasks',       'desc'=>'Show tasks in the client portal'],
+        ['name'=>'visitors_can_see_store_before_login',            'label'=>'Public Store (No Login Required)',       'desc'=>'Allow visitors to browse the store without logging in'],
+        ['name'=>'show_payment_option_after_submitting_the_order', 'label'=>'Show Payment After Order Submission',   'desc'=>'Redirect to payment immediately after an order is placed'],
+        ['name'=>'accept_order_before_login',                      'label'=>'Accept Orders Before Login',            'desc'=>'Complete order checkout without requiring an account'],
     ]; foreach($toggles as $t): ?>
     <div class="toggle-row">
         <div class="toggle-label">
@@ -28,7 +27,7 @@
         <div class="form-check form-switch mb-0">
             <input type="hidden" name="<?= $t['name'] ?>" value="0">
             <input class="form-check-input" type="checkbox" name="<?= $t['name'] ?>"
-                   id="cli_<?= $t['name'] ?>" value="1"
+                   id="store_<?= $t['name'] ?>" value="1"
                    <?= setting($t['name']) ? 'checked':'' ?>>
         </div>
     </div>
@@ -37,7 +36,7 @@
 
 <div class="d-flex justify-content-end mt-4">
     <button type="submit" class="btn btn-save">
-        <i class="fa-solid fa-floppy-disk me-2"></i>Save Client Settings
+        <i class="fa-solid fa-floppy-disk me-2"></i>Save Store Settings
     </button>
 </div>
 <?= form_close() ?>

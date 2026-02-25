@@ -1,87 +1,74 @@
-<div id="page-content" class="page-wrapper clearfix">
+<?= $this->extend('settings/layout') ?>
+
+<?= $this->section('settings_content') ?>
+
+<h4 class="mb-4">Regions</h4>
+
+<form id="region-form" method="post">
     <div class="row">
-        <div class="col-sm-3 col-lg-2">
-            <?php
-            $tab_view['active_tab'] = "settings";
-            echo view("settings/tabs", $tab_view);
-            ?>
+        <div class="form-group col-md-6 mb-3">
+            <label>Region <span class="text-danger">*</span></label>
+            <input type="text" name="name" required class="form-control">
+            <input type="hidden" name="id">
         </div>
 
-        <div class="col-sm-9 col-lg-10">
-            <div class="row">
+        <div class="form-group col-md-6 mb-3">
+            <label>Region Code</label>
+            <input type="text" name="region_code" class="form-control">
+        </div>
 
-                <div class="col-md-12 card">
-                    <div class="page-title clearfix">
-                        <h4><?php echo app_lang('regions'); ?></h4>
-                    </div>
+        <div class="form-group col-md-8 mb-3">
+            <label>Description</label>
+            <textarea name="description" rows="3" class="form-control"></textarea>
+        </div>
 
-                    <form id="region-form" method="post">
-                        <div class="row">
-                            <div class="form-group col-sm-6">
-                                <label>Region <span class="label-danger">*</span></label>
-                                <input type="text" name="name" required class="form-control">
-                                <input type="hidden" name="id">
-                            </div>
+        <div class="form-group col-md-4 mb-3 d-flex align-items-end">
+            <input type="submit" class="btn btn-success" value="Save">
+        </div>
+    </div>
+</form>
 
-                            <div class="form-group col-sm-6">
-                                <label>Region Code</label>
-                                <input type="text" name="region_code" class="form-control">
-                            </div>
-
-                            <div class="form-group col-sm-8">
-                                <label>Description</label>
-                                <textarea name="description" rows="3" class="form-control"></textarea>
-                            </div>
-
-                            <div class="form-group col-sm-4">
-                                <input type="submit" class="btn btn-md mt-4 btn-success" value="Save">
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="card p-3">
-                    <h4>Manage Regions</h4>
-
-                    <div class="table-responsive">
-                        <table id="region-table" class="display clickable b-b-only" cellspacing="0" width="100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Region</th>
-                                    <th>Code</th>
-                                    <th>Description</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($regions as $r): ?>
-                                    <tr data-id="<?= $r['id'] ?>">
-                                        <td><?= $r['id'] ?></td>
-                                        <td><?= esc($r['name']) ?></td>
-                                        <td><?= esc($r['code'] ?? '') ?></td>
-                                        <td><?= esc($r['description'] ?? '') ?></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning" onclick="editRegion(<?= $r['id'] ?>)">Edit</button>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteRegion(<?= $r['id'] ?>)">Delete</button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-            </div>
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Manage Regions</h5>
+        <div class="table-responsive">
+            <table id="region-table" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Region</th>
+                        <th>Code</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($regions)): ?>
+                        <?php foreach ($regions as $r): ?>
+                            <tr data-id="<?= $r['id'] ?>">
+                                <td><?= $r['id'] ?></td>
+                                <td><?= esc($r['name']) ?></td>
+                                <td><?= esc($r['code'] ?? '') ?></td>
+                                <td><?= esc($r['description'] ?? '') ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editRegion(<?= $r['id'] ?>)">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRegion(<?= $r['id'] ?>)">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No regions found. Add one above.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    $('#region-table').DataTable({ pageLength: 10, order: [[0, 'desc']] });
-
     $('#region-form').on('submit', function(e) {
         e.preventDefault();
         $.ajax({
@@ -131,3 +118,5 @@ function editRegion(id) {
     });
 }
 </script>
+
+<?= $this->endSection() ?>

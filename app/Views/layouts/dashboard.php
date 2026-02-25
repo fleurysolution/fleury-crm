@@ -3,95 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc($title ?? 'Dashboard') ?> - BPMS247</title>
-    <link href="<?= base_url('assets/css/style.css') ?>" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Styles are loaded from public/assets/css/style.css -->
+    <title><?= esc($title ?? 'Dashboard') ?> · BPMS247</title>
+
+    <!-- Bootstrap 5 CSS – local -->
+    <link rel="stylesheet" href="<?= base_url('assets/vendor/bootstrap/css/bootstrap.min.css') ?>">
+    <!-- Font Awesome 6 – local -->
+    <link rel="stylesheet" href="<?= base_url('assets/vendor/fontawesome/all.min.css') ?>">
+    <!-- Admin stylesheet -->
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
+
+    <style>
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    </style>
 </head>
-<body>
+<body class="admin-body">
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <div class="dashboard-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+
         <div class="sidebar-header">
-            <div class="sidebar-brand">BPMS<span>247</span></div>
+            <a href="<?= site_url('dashboard') ?>" class="sidebar-brand">
+                BPMS<span>247</span>
+            </a>
         </div>
+
         <nav class="sidebar-nav">
-            <div class="nav-category">Main</div>
-            <a href="<?= site_url('dashboard') ?>" class="nav-item <?= uri_string() == 'dashboard' ? 'active' : '' ?>">
+            <?php $uri = uri_string(); ?>
+
+            <div class="sidebar-category">Main</div>
+            <a href="<?= site_url('dashboard') ?>"
+               class="sidebar-link <?= $uri === 'dashboard' ? 'active' : '' ?>">
                 <i class="fa-solid fa-gauge"></i> Dashboard
             </a>
-            <a href="<?= site_url('leads') ?>" class="nav-item <?= strpos(uri_string(), 'leads') === 0 ? 'active' : '' ?>">
+            <a href="<?= site_url('leads') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'leads') ? 'active' : '' ?>">
                 <i class="fa-solid fa-filter"></i> Leads
             </a>
-            <a href="<?= site_url('clients') ?>" class="nav-item <?= strpos(uri_string(), 'clients') === 0 ? 'active' : '' ?>">
+            <a href="<?= site_url('clients') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'clients') ? 'active' : '' ?>">
                 <i class="fa-solid fa-building"></i> Clients
             </a>
-            <a href="<?= site_url('estimates') ?>" class="nav-item <?= strpos(uri_string(), 'estimates') === 0 ? 'active' : '' ?>">
+
+            <div class="sidebar-category">Finance</div>
+            <a href="<?= site_url('estimates') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'estimates') ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i> Estimates
             </a>
-            <a href="<?= site_url('invoices') ?>" class="nav-item <?= strpos(uri_string(), 'invoices') === 0 ? 'active' : '' ?>">
+            <a href="<?= site_url('invoices') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'invoices') ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
             </a>
-            
-            <div class="nav-category">Management</div>
-            <a href="<?= site_url('team') ?>" class="nav-item <?= strpos(uri_string(), 'team') === 0 ? 'active' : '' ?>">
+
+            <div class="sidebar-category">Management</div>
+            <a href="<?= site_url('team') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'team') ? 'active' : '' ?>">
                 <i class="fa-solid fa-users"></i> Team
             </a>
             <?php if (in_array('admin', session()->get('user_roles') ?? [])): ?>
-            <a href="<?= site_url('roles') ?>" class="nav-item <?= strpos(uri_string(), 'roles') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-shield-halved"></i> Roles & Permissions
+            <a href="<?= site_url('roles') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'roles') ? 'active' : '' ?>">
+                <i class="fa-solid fa-shield-halved"></i> Roles &amp; Permissions
             </a>
             <?php endif; ?>
-            <a href="<?= site_url('jobs') ?>" class="nav-item">
-                <i class="fa-solid fa-briefcase"></i> Jobs
+            <a href="<?= site_url('approval/requests') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'approval') ? 'active' : '' ?>">
+                <i class="fa-solid fa-diagram-project"></i> Approvals
             </a>
 
-            <div class="nav-category">Settings</div>
-            <?php if (in_array('admin', session()->get('user_roles') ?? [])): ?>
-            <a href="<?= site_url('settings') ?>" class="nav-item <?= strpos(uri_string(), 'settings') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-cog"></i> Settings
+            <!-- Single Settings entry — sub-nav is rendered by settings/layout.php -->
+            <div class="sidebar-category">Configure</div>
+            <a href="<?= site_url('settings/general') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'settings') ? 'active' : '' ?>">
+                <i class="fa-solid fa-sliders"></i> Settings
             </a>
-            <?php endif; ?>
+
         </nav>
-        <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-             <form action="<?= site_url('auth/signout') ?>" method="post">
-                <button type="submit" class="nav-item" style="width: 100%; text-align: left; background: none; border: none; cursor: pointer;">
-                    <i class="fa-solid fa-sign-out-alt"></i> Sign Out
-                </button>
-             </form>
-        </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
+        <div class="sidebar-footer">
+            <form action="<?= site_url('auth/signout') ?>" method="post">
+                <?= csrf_field() ?>
+                <button type="submit" class="sidebar-link w-100">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                </button>
+            </form>
+        </div>
+
+    </aside>
+    <!-- /SIDEBAR -->
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <div class="main-content">
+
+        <!-- TOPBAR -->
         <header class="topbar">
-            <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;"><?= esc($title ?? 'Page') ?></h2>
+            <div class="d-flex align-items-center gap-3">
+                <button class="d-lg-none btn btn-sm btn-light border-0 p-2"
+                        onclick="openSidebar()" aria-label="Open menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2 class="topbar-title mb-0"><?= esc($title ?? 'Dashboard') ?></h2>
+            </div>
+
             <div class="user-menu">
-                <span><?= session()->get('user_name') ?></span>
-                <div class="user-avatar">
-                    <i class="fa-solid fa-user"></i>
+                <?php if (session()->get('is_logged_in')): ?>
+                <span class="d-none d-md-inline text-muted" style="font-size:.875rem;">
+                    <?= esc(session()->get('user_name') ?: session()->get('user_email')) ?>
+                </span>
+                <div class="user-avatar" title="<?= esc(session()->get('user_name') ?? '') ?>">
+                    <?= strtoupper(substr((string)(session()->get('user_name') ?: 'U'), 0, 1)) ?>
                 </div>
+                <?php endif; ?>
             </div>
         </header>
-        
+        <!-- /TOPBAR -->
+
+        <!-- PAGE CONTENT -->
         <div class="content-wrapper">
-             <?php if (session()->getFlashdata('message')) : ?>
-                <div class="alert alert-success"><?= session()->getFlashdata('message') ?></div>
+
+            <?php if (session()->getFlashdata('message')): ?>
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i>
+                <?= esc(session()->getFlashdata('message')) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
             <?php endif; ?>
-            <?php if (session()->getFlashdata('error')) : ?>
-                <div class="alert alert-danger"><?= session()->getFlashdata('error') ?></div>
+
+            <?php if (session()->getFlashdata('error')): ?>
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="fa-solid fa-circle-exclamation me-2"></i>
+                <?= esc(session()->getFlashdata('error')) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
             <?php endif; ?>
 
             <?= $this->renderSection('content') ?>
-        </div>
-    </main>
-</div>
 
-<!-- Bootstrap 5 JS Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </div>
+        <!-- /PAGE CONTENT -->
+
+    </div>
+    <!-- /MAIN CONTENT -->
+
+</div>
+<!-- /dashboard-layout -->
+
+<!-- Bootstrap Bundle JS – local -->
+<script src="<?= base_url('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+<!-- jQuery – local -->
+<script src="<?= base_url('assets/vendor/jquery/jquery.min.js') ?>"></script>
+
+<script>
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('show');
+    document.getElementById('sidebarOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('show');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+</script>
+
 </body>
 </html>

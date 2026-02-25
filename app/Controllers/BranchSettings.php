@@ -2,12 +2,11 @@
 
 namespace App\Controllers;
 
-use App\Controllers\Security_Controller;
 use App\Models\Region_model;
 use App\Models\Office_model;
 use App\Models\Division_model;
 
-class BranchSettings extends Security_Controller
+class BranchSettings extends BaseController
 {
     protected Region_model $regionModel;
     protected Office_model $officeModel;
@@ -15,9 +14,7 @@ class BranchSettings extends Security_Controller
 
     public function __construct()
     {
-        parent::__construct();
-        $this->access_only_admin_or_settings_admin();
-
+        helper('settings');
         $this->regionModel   = new Region_model();
         $this->officeModel   = new Office_model();
         $this->divisionModel = new Division_model();
@@ -29,31 +26,37 @@ class BranchSettings extends Security_Controller
 
     public function regions()
     {
-        $view_data = [
+        $data = [
+            'title' => 'Regions',
+            'tab' => 'branches',
             'regions' => $this->regionModel->getAllActive(),
         ];
 
-        return $this->template->rander("settings/branch/regions", $view_data);
+        return view('settings/branch/regions', $data);
     }
 
     public function offices()
     {
-        $view_data = [
+        $data = [
+            'title' => 'Offices',
+            'tab' => 'branches',
             'regions' => $this->regionModel->getAllActive(),
             'offices' => $this->officeModel->getAllWithRegion(),
         ];
 
-        return $this->template->rander("settings/branch/branches", $view_data);
+        return view('settings/branch/branches', $data);
     }
 
     public function divisions()
     {
-        $view_data = [
-            'regions'   => $this->regionModel->getAllActive(),
+        $data = [
+            'title' => 'Divisions',
+            'tab' => 'branches',
+            'regions' => $this->regionModel->getAllActive(),
             'divisions' => $this->divisionModel->getAllWithRegionOffice(),
         ];
 
-        return $this->template->rander("settings/branch/divisions", $view_data);
+        return view('settings/branch/divisions', $data);
     }
 
     // =====================

@@ -1,106 +1,95 @@
-<div id="page-content" class="page-wrapper clearfix">
+<?= $this->extend('settings/layout') ?>
+
+<?= $this->section('settings_content') ?>
+
+<h4 class="mb-4">Offices / Branches</h4>
+
+<form id="office-form" method="post">
     <div class="row">
-        <div class="col-sm-3 col-lg-2">
-            <?php
-            $tab_view['active_tab'] = "settings";
-            echo view("settings/tabs", $tab_view);
-            ?>
+        <div class="form-group col-md-4 mb-3">
+            <label>Region <span class="text-danger">*</span></label>
+            <select class="form-select" name="region_id" required>
+                <option value="">Select Region</option>
+                <?php if (!empty($regions)): ?>
+                    <?php foreach ($regions as $r): ?>
+                        <option value="<?= $r['id'] ?>"><?= esc($r['name']) ?></option>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </select>
         </div>
 
-        <div class="col-sm-9 col-lg-10">
-            <div class="row">
+        <div class="form-group col-md-4 mb-3">
+            <label>Branch/Office <span class="text-danger">*</span></label>
+            <input type="text" name="name" required class="form-control">
+            <input type="hidden" name="id">
+        </div>
 
-                <div class="col-md-12 card">
-                    <div class="page-title clearfix">
-                        <h4><?php echo app_lang('branches'); ?></h4>
-                    </div>
+        <div class="form-group col-md-4 mb-3">
+            <label>Address</label>
+            <input type="text" name="address" class="form-control">
+        </div>
 
-                    <form id="office-form" method="post">
-                        <div class="row">
-                            <div class="form-group col-sm-4">
-                                <label>Region <span class="label-danger">*</span></label>
-                                <select class="form-select" name="region_id" required>
-                                    <option value="">Select</option>
-                                    <?php foreach ($regions as $r): ?>
-                                        <option value="<?= $r['id'] ?>"><?= esc($r['name']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+        <div class="form-group col-md-4 mb-3">
+            <label>Email</label>
+            <input type="email" name="email" class="form-control">
+        </div>
 
-                            <div class="form-group col-sm-4">
-                                <label>Branch/Office <span class="label-danger">*</span></label>
-                                <input type="text" name="name" required class="form-control">
-                                <input type="hidden" name="id">
-                            </div>
+        <div class="form-group col-md-4 mb-3">
+            <label>Phone</label>
+            <input type="tel" name="phone" class="form-control">
+        </div>
 
-                            <div class="form-group col-sm-4">
-                                <label>Address</label>
-                                <input type="text" name="address" class="form-control">
-                            </div>
+        <div class="form-group col-md-4 mb-3 d-flex align-items-end">
+            <input type="submit" class="btn btn-success" value="Save">
+        </div>
+    </div>
+</form>
 
-                            <div class="form-group col-sm-4">
-                                <label>Email</label>
-                                <input type="email" name="email" class="form-control">
-                            </div>
-
-                            <div class="form-group col-sm-4">
-                                <label>Phone</label>
-                                <input type="tel" name="phone" class="form-control">
-                            </div>
-
-                            <div class="form-group col-sm-4">
-                                <input type="submit" class="btn btn-md mt-4 btn-success" value="Save">
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="card p-3">
-                    <h4>Manage Branches</h4>
-
-                    <div class="table-responsive">
-                        <table id="branch-table" class="display clickable thead b-b-only" cellspacing="0" width="100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Office</th>
-                                    <th>Region</th>
-                                    <th>Address</th>
-                                    <th>Phone</th>
-                                    <th>Email</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($offices as $o): ?>
-                                    <tr data-id="<?= $o['id'] ?>">
-                                        <td><?= $o['id'] ?></td>
-                                        <td><?= esc($o['name']) ?></td>
-                                        <td><?= esc($o['region_name'] ?? '-') ?></td>
-                                        <td><?= esc($o['address'] ?? '') ?></td>
-                                        <td><?= esc($o['phone'] ?? '') ?></td>
-                                        <td><?= esc($o['email'] ?? '') ?></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning" onclick="editOffice(<?= $o['id'] ?>)">Edit</button>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteOffice(<?= $o['id'] ?>)">Delete</button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-            </div>
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Manage Offices</h5>
+        <div class="table-responsive">
+            <table id="branch-table" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Office</th>
+                        <th>Region</th>
+                        <th>Address</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($offices)): ?>
+                        <?php foreach ($offices as $o): ?>
+                            <tr data-id="<?= $o['id'] ?>">
+                                <td><?= $o['id'] ?></td>
+                                <td><?= esc($o['name']) ?></td>
+                                <td><?= esc($o['region_name'] ?? '-') ?></td>
+                                <td><?= esc($o['address'] ?? '') ?></td>
+                                <td><?= esc($o['phone'] ?? '') ?></td>
+                                <td><?= esc($o['email'] ?? '') ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editOffice(<?= $o['id'] ?>)">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteOffice(<?= $o['id'] ?>)">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No offices found. Add one above.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    $('#branch-table').DataTable({ pageLength: 10, order: [[0, 'desc']] });
-
     $('#office-form').on('submit', function(e) {
         e.preventDefault();
         $.ajax({
@@ -152,3 +141,5 @@ function editOffice(id) {
     });
 }
 </script>
+
+<?= $this->endSection() ?>

@@ -1,108 +1,97 @@
-<div id="page-content" class="page-wrapper clearfix">
+<?= $this->extend('settings/layout') ?>
+
+<?= $this->section('settings_content') ?>
+
+<h4 class="mb-4">Divisions</h4>
+
+<form id="division-form" method="post">
     <div class="row">
-        <div class="col-sm-3 col-lg-2">
-            <?php
-            $tab_view['active_tab'] = "settings";
-            echo view("settings/tabs", $tab_view);
-            ?>
+        <div class="form-group col-md-4 mb-3">
+            <label>Region <span class="text-danger">*</span></label>
+            <select class="form-select" name="region_id" id="region" required>
+                <option value="">Select Region</option>
+                <?php if (!empty($regions)): ?>
+                    <?php foreach ($regions as $r): ?>
+                        <option value="<?= $r['id'] ?>"><?= esc($r['name']) ?></option>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </select>
         </div>
 
-        <div class="col-sm-9 col-lg-10">
-            <div class="row">
+        <div class="form-group col-md-4 mb-3">
+            <label>Branch/Office <span class="text-danger">*</span></label>
+            <select class="form-select" name="office_id" id="office" required>
+                <option value="">Select Office</option>
+            </select>
+        </div>
 
-                <div class="col-md-12 card">
-                    <div class="page-title clearfix">
-                        <h4><?php echo app_lang('divisions'); ?></h4>
-                    </div>
+        <div class="form-group col-md-4 mb-3">
+            <label>Division <span class="text-danger">*</span></label>
+            <input type="text" name="name" required class="form-control">
+            <input type="hidden" name="id">
+        </div>
 
-                    <form id="division-form" method="post">
-                        <div class="row">
-                            <div class="form-group col-sm-4">
-                                <label>Region <span class="label-danger">*</span></label>
-                                <select class="form-select" name="region_id" id="region" required>
-                                    <option value="">Select</option>
-                                    <?php foreach ($regions as $r): ?>
-                                        <option value="<?= $r['id'] ?>"><?= esc($r['name']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+        <div class="form-group col-md-8 mb-3">
+            <label>Description</label>
+            <textarea name="description" rows="3" class="form-control"></textarea>
+        </div>
 
-                            <div class="form-group col-sm-4">
-                                <label>Branch/Office <span class="label-danger">*</span></label>
-                                <select class="form-select" name="office_id" id="office" required>
-                                    <option value="">Select</option>
-                                </select>
-                            </div>
+        <div class="form-group col-md-4 mb-3 d-flex align-items-end">
+            <input type="submit" class="btn btn-success" value="Save">
+        </div>
+    </div>
+</form>
 
-                            <div class="form-group col-sm-4">
-                                <label>Division <span class="label-danger">*</span></label>
-                                <input type="text" name="name" required class="form-control">
-                                <input type="hidden" name="id">
-                            </div>
-
-                            <div class="form-group col-sm-8">
-                                <label>Description</label>
-                                <textarea name="description" rows="3" class="form-control"></textarea>
-                            </div>
-
-                            <div class="form-group col-sm-4">
-                                <input type="submit" class="btn btn-md mt-4 btn-success" value="Save">
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="card p-3">
-                    <h4>Manage Divisions</h4>
-
-                    <div class="table-responsive">
-                        <table id="division-table" class="display clickable b-b-only" cellspacing="0" width="100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Division</th>
-                                    <th>Region</th>
-                                    <th>Office</th>
-                                    <th>Description</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($divisions as $d): ?>
-                                    <tr data-id="<?= $d['id'] ?>">
-                                        <td><?= $d['id'] ?></td>
-                                        <td><?= esc($d['name']) ?></td>
-                                        <td><?= esc($d['region_name'] ?? '-') ?></td>
-                                        <td><?= esc($d['office_name'] ?? '-') ?></td>
-                                        <td><?= esc($d['description'] ?? '') ?></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning" onclick="editDivision(<?= $d['id'] ?>)">Edit</button>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteDivision(<?= $d['id'] ?>)">Delete</button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-            </div>
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Manage Divisions</h5>
+        <div class="table-responsive">
+            <table id="division-table" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Division</th>
+                        <th>Region</th>
+                        <th>Office</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($divisions)): ?>
+                        <?php foreach ($divisions as $d): ?>
+                            <tr data-id="<?= $d['id'] ?>">
+                                <td><?= $d['id'] ?></td>
+                                <td><?= esc($d['name']) ?></td>
+                                <td><?= esc($d['region_name'] ?? '-') ?></td>
+                                <td><?= esc($d['office_name'] ?? '-') ?></td>
+                                <td><?= esc($d['description'] ?? '') ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editDivision(<?= $d['id'] ?>)">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteDivision(<?= $d['id'] ?>)">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No divisions found. Add one above.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    $('#division-table').DataTable({ pageLength: 10, order: [[0, 'desc']] });
-
     $('#region').on('change', function() {
         const regionId = $(this).val();
-        $('#office').html('<option value="">Select</option>');
+        $('#office').html('<option value="">Select Office</option>');
         if (!regionId) return;
 
         $.getJSON('<?= site_url('settings/branches/offices/by-region/'); ?>' + regionId, function(offices) {
-            let html = '<option value="">Select</option>';
+            let html = '<option value="">Select Office</option>';
             $.each(offices, function(_, o) {
                 html += `<option value="${o.id}">${o.name}</option>`;
             });
@@ -166,3 +155,5 @@ function editDivision(id) {
     });
 }
 </script>
+
+<?= $this->endSection() ?>

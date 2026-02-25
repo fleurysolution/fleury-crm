@@ -1,121 +1,140 @@
 <?= $this->extend('settings/layout') ?>
-
 <?= $this->section('settings_content') ?>
 
-<h4 class="mb-4">General Settings</h4>
+<div class="d-flex align-items-center gap-2 mb-4">
+    <div class="settings-icon-badge"><i class="fa-solid fa-building text-primary fa-lg"></i></div>
+    <div>
+        <h5 class="fw-bold mb-0">General Settings</h5>
+        <small class="text-muted">Configure your application's core settings</small>
+    </div>
+</div>
 
-<?= form_open_multipart('settings/save', ['class' => 'general-form']) ?>
+<?= form_open_multipart('settings/save_general_settings', ['class' => 'settings-ajax-form']) ?>
 <input type="hidden" name="setting_group" value="general">
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label for="app_title" class="form-label">App Title</label>
-        <input type="text" name="app_title" id="app_title" class="form-control" value="<?= esc(setting('app_title', 'BPMS247')) ?>">
+<div class="settings-section-hdr">Application Identity</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label for="app_title" class="form-label">Application Title</label>
+        <input type="text" name="app_title" id="app_title" class="form-control"
+               value="<?= esc(setting('app_title', 'BPMS247')) ?>"
+               placeholder="e.g. My CRM">
     </div>
-
-    <div class="col-md-6 mb-3">
+    <div class="col-md-6">
         <label for="company_email" class="form-label">Company Email</label>
-        <input type="email" name="company_email" id="company_email" class="form-control" value="<?= esc(setting('company_email')) ?>">
+        <input type="email" name="company_email" id="company_email" class="form-control"
+               value="<?= esc(setting('company_email', '')) ?>"
+               placeholder="info@example.com">
     </div>
-    
-    <div class="col-md-12 mb-3">
+    <div class="col-md-6">
         <label class="form-label">Site Logo</label>
-        <div class="d-flex align-items-center gap-3">
-            <?php if(setting('site_logo')): ?>
-                <div class="p-2 border rounded bg-light">
-                    <img src="<?= base_url('files/system/' . setting('site_logo')) ?>" alt="Site Logo" style="max-height: 50px;">
-                </div>
-            <?php endif; ?>
-            <input type="file" name="site_logo" class="form-control">
+        <?php if(setting('site_logo')): ?>
+        <div class="mb-2 p-2 border rounded bg-light d-inline-block">
+            <img src="<?= base_url('files/system/' . setting('site_logo')) ?>" alt="Logo" style="max-height:48px;">
         </div>
-        <small class="text-muted">Upload a PNG or JPG image.</small>
+        <?php endif; ?>
+        <input type="file" name="site_logo" class="form-control" accept="image/*">
+        <div class="form-text">PNG or JPG recommended.</div>
     </div>
-
-    <div class="col-md-12 mb-3">
+    <div class="col-md-6">
         <label class="form-label">Favicon</label>
-        <div class="d-flex align-items-center gap-3">
-            <?php if(setting('favicon')): ?>
-                <div class="p-2 border rounded bg-light">
-                    <img src="<?= base_url('files/system/' . setting('favicon')) ?>" alt="Favicon" style="max-height: 32px;">
-                </div>
-            <?php endif; ?>
-            <input type="file" name="favicon" class="form-control">
+        <?php if(setting('favicon')): ?>
+        <div class="mb-2 p-2 border rounded bg-light d-inline-block">
+            <img src="<?= base_url('files/system/' . setting('favicon')) ?>" alt="Favicon" style="max-height:32px;">
         </div>
-        <small class="text-muted">Upload a 32x32 PNG image.</small>
+        <?php endif; ?>
+        <input type="file" name="favicon" class="form-control" accept="image/*">
+        <div class="form-text">Recommended: 32×32 PNG.</div>
     </div>
+</div>
 
-    <div class="col-md-6 mb-3">
+<div class="settings-section-hdr">Display Preferences</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
         <label for="rows_per_page" class="form-label">Rows Per Page</label>
         <select name="rows_per_page" id="rows_per_page" class="form-select">
-            <option value="10" <?= setting('rows_per_page') == '10' ? 'selected' : '' ?>>10</option>
-            <option value="25" <?= setting('rows_per_page') == '25' ? 'selected' : '' ?>>25</option>
-            <option value="50" <?= setting('rows_per_page') == '50' ? 'selected' : '' ?>>50</option>
-            <option value="100" <?= setting('rows_per_page') == '100' ? 'selected' : '' ?>>100</option>
-        </select>
-    </div>
-
-    <div class="col-md-6 mb-3">
-        <label for="default_language" class="form-label">Default Language</label>
-        <select name="default_language" id="default_language" class="form-select">
-            <option value="english" <?= setting('default_language') == 'english' ? 'selected' : '' ?>>English</option>
-            <option value="spanish" <?= setting('default_language') == 'spanish' ? 'selected' : '' ?>>Spanish</option>
-            <option value="french" <?= setting('default_language') == 'french' ? 'selected' : '' ?>>French</option>
-        </select>
-    </div>
-    
-    <div class="col-md-6 mb-3">
-        <label for="timezone" class="form-label">Timezone</label>
-        <select name="timezone" id="timezone" class="form-select">
-            <option value="UTC" <?= setting('timezone') == 'UTC' ? 'selected' : '' ?>>UTC</option>
-             <?php 
-                $zones = timezone_identifiers_list();
-                foreach($zones as $zone): 
-            ?>
-                <option value="<?= $zone ?>" <?= setting('timezone') == $zone ? 'selected' : '' ?>><?= $zone ?></option>
+            <?php foreach ([10,25,50,100] as $n): ?>
+            <option value="<?= $n ?>" <?= setting('rows_per_page')==$n ? 'selected' : '' ?>><?= $n ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    
-     <div class="col-md-6 mb-3">
-        <label for="date_format" class="form-label">Date Format</label>
-        <select name="date_format" id="date_format" class="form-select">
-            <option value="Y-m-d" <?= setting('date_format') == 'Y-m-d' ? 'selected' : '' ?>>Y-m-d (2024-12-31)</option>
-            <option value="d-m-Y" <?= setting('date_format') == 'd-m-Y' ? 'selected' : '' ?>>d-m-Y (31-12-2024)</option>
-            <option value="m/d/Y" <?= setting('date_format') == 'm/d/Y' ? 'selected' : '' ?>>m/d/Y (12/31/2024)</option>
+    <div class="col-md-4">
+        <label for="default_language" class="form-label">Default Language</label>
+        <select name="default_language" id="default_language" class="form-select">
+            <option value="english" <?= setting('default_language')=='english' ? 'selected' : '' ?>>English</option>
+            <option value="spanish" <?= setting('default_language')=='spanish' ? 'selected' : '' ?>>Spanish</option>
+            <option value="french"  <?= setting('default_language')=='french'  ? 'selected' : '' ?>>French</option>
         </select>
     </div>
-
-    <div class="col-md-12 mb-3">
+    <div class="col-md-4">
         <label for="accepted_file_formats" class="form-label">Accepted File Formats</label>
-        <input type="text" name="accepted_file_formats" id="accepted_file_formats" class="form-control" value="<?= esc(setting('accepted_file_formats', 'jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,txt,zip')) ?>">
-        <small class="text-muted">Comma separated. Example: jpg,png,pdf</small>
+        <input type="text" name="accepted_file_formats" id="accepted_file_formats" class="form-control"
+               value="<?= esc(setting('accepted_file_formats', 'jpg,jpeg,png,pdf,doc,docx,xls,xlsx,txt,zip')) ?>">
+        <div class="form-text">Comma-separated extensions.</div>
     </div>
-    
-    <div class="col-md-12 mb-3">
-        <div class="form-check form-switch">
-             <input type="hidden" name="show_background_image_in_signin_page" value="0">
-            <input class="form-check-input" type="checkbox" id="show_background_image_in_signin_page" name="show_background_image_in_signin_page" value="1" <?= setting('show_background_image_in_signin_page') ? 'checked' : '' ?>>
-            <label class="form-check-label" for="show_background_image_in_signin_page">Show background image in Header?</label>
+</div>
+
+<div class="settings-section-hdr">UI Options</div>
+<div class="toggle-list">
+    <div class="toggle-row">
+        <div class="toggle-label">
+            <strong>Show Background Image on Sign-in</strong>
+            <small>Display a background image on the login page</small>
         </div>
-        
-         <div class="form-check form-switch mt-2">
-             <input type="hidden" name="show_logo_in_signin_page" value="0">
-            <input class="form-check-input" type="checkbox" id="show_logo_in_signin_page" name="show_logo_in_signin_page" value="1" <?= setting('show_logo_in_signin_page') ? 'checked' : '' ?>>
-            <label class="form-check-label" for="show_logo_in_signin_page">Show logo in Signin Page?</label>
+        <div class="form-check form-switch mb-0">
+            <input type="hidden" name="show_background_image_in_signin_page" value="0">
+            <input class="form-check-input" type="checkbox" id="show_bg"
+                   name="show_background_image_in_signin_page" value="1"
+                   <?= setting('show_background_image_in_signin_page') ? 'checked' : '' ?>>
         </div>
-        
-        <div class="form-check form-switch mt-2">
-             <input type="hidden" name="enable_rich_text_editor" value="0">
-            <input class="form-check-input" type="checkbox" id="enable_rich_text_editor" name="enable_rich_text_editor" value="1" <?= setting('enable_rich_text_editor') ? 'checked' : '' ?>>
-            <label class="form-check-label" for="enable_rich_text_editor">Enable Rich Text Editor?</label>
+    </div>
+    <div class="toggle-row">
+        <div class="toggle-label">
+            <strong>Show Logo on Sign-in Page</strong>
+            <small>Display your logo above the login form</small>
+        </div>
+        <div class="form-check form-switch mb-0">
+            <input type="hidden" name="show_logo_in_signin_page" value="0">
+            <input class="form-check-input" type="checkbox" id="show_logo"
+                   name="show_logo_in_signin_page" value="1"
+                   <?= setting('show_logo_in_signin_page') ? 'checked' : '' ?>>
+        </div>
+    </div>
+    <div class="toggle-row">
+        <div class="toggle-label">
+            <strong>Enable Rich Text Editor</strong>
+            <small>Use TinyMCE/WYSIWYG editors in text areas</small>
+        </div>
+        <div class="form-check form-switch mb-0">
+            <input type="hidden" name="enable_rich_text_editor" value="0">
+            <input class="form-check-input" type="checkbox" id="rich_text"
+                   name="enable_rich_text_editor" value="1"
+                   <?= setting('enable_rich_text_editor') ? 'checked' : '' ?>>
+        </div>
+    </div>
+    <div class="toggle-row">
+        <div class="toggle-label">
+            <strong>Custom Scrollbar</strong>
+            <small>Enable styled scrollbars throughout the app</small>
+        </div>
+        <div class="form-check form-switch mb-0">
+            <input type="hidden" name="scrollbar" value="0">
+            <input class="form-check-input" type="checkbox" id="scrollbar"
+                   name="scrollbar" value="1"
+                   <?= setting('scrollbar') ? 'checked' : '' ?>>
         </div>
     </div>
 </div>
 
-<div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
-    <button type="submit" class="btn btn-primary">Save Changes</button>
+<div class="d-flex justify-content-end mt-4">
+    <button type="submit" class="btn btn-save">
+        <i class="fa-solid fa-floppy-disk me-2"></i>Save General Settings
+    </button>
 </div>
-
 <?= form_close() ?>
 
+<style>
+.settings-icon-badge{width:48px;height:48px;border-radius:12px;background:rgba(74,144,226,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.toggle-list{border:1.5px solid #e5e7eb;border-radius:10px;padding:0 1rem;background:#fff;}
+</style>
 <?= $this->endSection() ?>

@@ -1,89 +1,94 @@
 <?= $this->extend('settings/layout') ?>
-
 <?= $this->section('settings_content') ?>
 
-<h4 class="mb-4">Email Settings</h4>
+<div class="d-flex align-items-center gap-2 mb-4">
+    <div class="settings-icon-badge"><i class="fa-solid fa-envelope text-primary fa-lg"></i></div>
+    <div>
+        <h5 class="fw-bold mb-0">Email / SMTP Settings</h5>
+        <small class="text-muted">Configure outgoing email delivery</small>
+    </div>
+</div>
 
-<?= form_open('settings/save', ['class' => 'general-form']) ?>
+<?= form_open('settings/save_email_settings', ['class' => 'settings-ajax-form']) ?>
 <input type="hidden" name="setting_group" value="email">
 
-<div class="row">
+<div class="settings-section-hdr">Sender Identity</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label for="email_sent_from_address" class="form-label">From Email Address</label>
+        <input type="email" name="email_sent_from_address" id="email_sent_from_address"
+               class="form-control" value="<?= esc(setting('email_sent_from_address', '')) ?>"
+               placeholder="no-reply@example.com">
+    </div>
+    <div class="col-md-6">
+        <label for="email_sent_from_name" class="form-label">From Name</label>
+        <input type="text" name="email_sent_from_name" id="email_sent_from_name"
+               class="form-control" value="<?= esc(setting('email_sent_from_name', '')) ?>"
+               placeholder="My Application">
+    </div>
+</div>
 
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Email Protocol</label>
-        <select name="email_protocol" class="form-select">
-            <option value="smtp" <?= setting('email_protocol') == 'smtp' ? 'selected' : '' ?>>SMTP</option>
-            <option value="microsoft_outlook" <?= setting('email_protocol') == 'microsoft_outlook' ? 'selected' : '' ?>>Microsoft Outlook</option>
+<!-- Protocol tabs -->
+<div class="settings-section-hdr">Protocol</div>
+<div class="mb-3">
+    <div class="btn-group" role="group" id="protocolGroup">
+        <?php foreach(['smtp'=>'SMTP','sendmail'=>'Sendmail','mail'=>'PHP Mail'] as $val=>$lbl): ?>
+        <input type="radio" class="btn-check" name="email_protocol" id="proto_<?= $val ?>"
+               value="<?= $val ?>" <?= setting('email_protocol')==$val ? 'checked' : '' ?>>
+        <label class="btn btn-outline-primary btn-sm" for="proto_<?= $val ?>"><?= $lbl ?></label>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<div class="row g-3 mb-3" id="smtpFields">
+    <div class="col-md-6">
+        <label for="email_smtp_host" class="form-label">SMTP Host</label>
+        <input type="text" name="email_smtp_host" id="email_smtp_host"
+               class="form-control" value="<?= esc(setting('email_smtp_host', '')) ?>"
+               placeholder="smtp.gmail.com">
+    </div>
+    <div class="col-md-3">
+        <label for="email_smtp_port" class="form-label">SMTP Port</label>
+        <input type="number" name="email_smtp_port" id="email_smtp_port"
+               class="form-control" value="<?= esc(setting('email_smtp_port', '587')) ?>"
+               placeholder="587">
+    </div>
+    <div class="col-md-3">
+        <label for="email_smtp_security_type" class="form-label">Encryption</label>
+        <select name="email_smtp_security_type" id="email_smtp_security_type" class="form-select">
+            <option value=""    <?= setting('email_smtp_security_type')==''     ? 'selected':'' ?>>None</option>
+            <option value="tls" <?= setting('email_smtp_security_type')=='tls'  ? 'selected':'' ?>>TLS</option>
+            <option value="ssl" <?= setting('email_smtp_security_type')=='ssl'  ? 'selected':'' ?>>SSL</option>
         </select>
     </div>
-
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Email Sent From Address</label>
-        <input type="email" name="email_sent_from_address" class="form-control" value="<?= esc(setting('email_sent_from_address')) ?>" placeholder="noreply@example.com">
+    <div class="col-md-6">
+        <label for="email_smtp_user" class="form-label">SMTP Username</label>
+        <input type="text" name="email_smtp_user" id="email_smtp_user"
+               class="form-control" value="<?= esc(setting('email_smtp_user', '')) ?>"
+               autocomplete="username" placeholder="user@example.com">
     </div>
-
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Email Sent From Name</label>
-        <input type="text" name="email_sent_from_name" class="form-control" value="<?= esc(setting('email_sent_from_name')) ?>" placeholder="Company Name">
-    </div>
-
-    <div class="col-md-12">
-        <div class="card bg-light border-0 mb-3">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">SMTP Configuration</h6>
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label class="form-label">SMTP Host</label>
-                        <input type="text" name="email_smtp_host" class="form-control" value="<?= esc(setting('email_smtp_host')) ?>" placeholder="smtp.mailtrap.io">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">SMTP Port</label>
-                        <input type="number" name="email_smtp_port" class="form-control" value="<?= esc(setting('email_smtp_port', '587')) ?>">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">SMTP Username</label>
-                        <input type="text" name="email_smtp_user" class="form-control" value="<?= esc(setting('email_smtp_user')) ?>">
-                    </div>
-                     <div class="col-md-6 mb-3">
-                        <label class="form-label">SMTP Password</label>
-                        <input type="password" name="email_smtp_pass" class="form-control" value="<?= esc(setting('email_smtp_pass')) ?>">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Security Type</label>
-                        <select name="email_smtp_security_type" class="form-select">
-                            <option value="tls" <?= setting('email_smtp_security_type') == 'tls' ? 'selected' : '' ?>>TLS</option>
-                            <option value="ssl" <?= setting('email_smtp_security_type') == 'ssl' ? 'selected' : '' ?>>SSL</option>
-                            <option value="" <?= setting('email_smtp_security_type') == '' ? 'selected' : '' ?>>None</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+    <div class="col-md-6">
+        <label for="email_smtp_pass" class="form-label">SMTP Password</label>
+        <div class="input-group">
+            <input type="password" name="email_smtp_pass" id="email_smtp_pass"
+                   class="form-control" value="<?= esc(setting('email_smtp_pass', '')) ?>"
+                   autocomplete="current-password" placeholder="••••••••">
+            <button class="btn btn-outline-secondary" type="button" id="toggleSmtpPass"
+                    onclick="const i=document.getElementById('email_smtp_pass');i.type=i.type==='password'?'text':'password'">
+                <i class="fa-solid fa-eye"></i>
+            </button>
         </div>
     </div>
-    
-     <div class="col-md-12">
-        <div class="card bg-light border-0 mb-3">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Microsoft Outlook Configuration</h6>
-                 <div class="mb-3">
-                    <label class="form-label">Client ID</label>
-                    <input type="text" name="outlook_smtp_client_id" class="form-control" value="<?= esc(setting('outlook_smtp_client_id')) ?>">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Client Secret</label>
-                    <input type="text" name="outlook_smtp_client_secret" class="form-control" value="<?= esc(setting('outlook_smtp_client_secret')) ?>">
-                </div>
-            </div>
-        </div>
-    </div>
-
 </div>
 
-<div class="d-flex justify-content-between mt-3">
-    <button type="button" class="btn btn-outline-secondary">Send Test Email</button>
-    <button type="submit" class="btn btn-primary">Save Changes</button>
+<div class="d-flex justify-content-end mt-4">
+    <button type="submit" class="btn btn-save">
+        <i class="fa-solid fa-floppy-disk me-2"></i>Save Email Settings
+    </button>
 </div>
-
 <?= form_close() ?>
 
+<style>
+.settings-icon-badge{width:48px;height:48px;border-radius:12px;background:rgba(74,144,226,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+</style>
 <?= $this->endSection() ?>

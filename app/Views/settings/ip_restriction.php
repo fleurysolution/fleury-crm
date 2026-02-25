@@ -1,24 +1,36 @@
 <?= $this->extend('settings/layout') ?>
-
 <?= $this->section('settings_content') ?>
 
-<h4 class="mb-4">IP Restriction</h4>
-
-<?= form_open('settings/save', ['class' => 'general-form']) ?>
-<input type="hidden" name="setting_group" value="ip_restriction">
-
-<div class="row">
-     <div class="col-md-12 mb-3">
-        <label class="form-label">Allowed IP Addresses</label>
-        <textarea name="allowed_ip_addresses" class="form-control" rows="5" placeholder="Enter each IP address in a new line."><?= esc(setting('allowed_ip_addresses')) ?></textarea>
-        <small class="text-muted">Enter each IP address in a new line. Keep it blank to allow all IPs.</small>
+<div class="d-flex align-items-center gap-2 mb-4">
+    <div class="settings-icon-badge"><i class="fa-solid fa-ban text-primary fa-lg"></i></div>
+    <div>
+        <h5 class="fw-bold mb-0">IP Restriction</h5>
+        <small class="text-muted">Restrict access to specific IP addresses</small>
     </div>
 </div>
 
-<div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
-    <button type="submit" class="btn btn-primary">Save Changes</button>
+<?= form_open('settings/save_ip_settings', ['class' => 'settings-ajax-form']) ?>
+<input type="hidden" name="setting_group" value="security">
+
+<div class="alert alert-warning border-0 shadow-sm mb-4" style="border-radius:10px;">
+    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+    <strong>Caution:</strong> If you save an IP address that doesn't include your own current IP, you may lock yourself out.
 </div>
 
+<div class="mb-3">
+    <label for="allowed_ip_addresses" class="form-label">Allowed IP Addresses</label>
+    <textarea name="allowed_ip_addresses" id="allowed_ip_addresses"
+              class="form-control font-monospace" rows="6"
+              placeholder="One IP per line. Leave blank to allow all."><?= esc(setting('allowed_ip_addresses','')) ?></textarea>
+    <div class="form-text">Enter one IP address per line. Leave empty to allow access from all IPs.</div>
+</div>
+
+<div class="d-flex justify-content-end mt-4">
+    <button type="submit" class="btn btn-save">
+        <i class="fa-solid fa-floppy-disk me-2"></i>Save IP Settings
+    </button>
+</div>
 <?= form_close() ?>
 
+<style>.settings-icon-badge{width:48px;height:48px;border-radius:12px;background:rgba(74,144,226,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}</style>
 <?= $this->endSection() ?>
