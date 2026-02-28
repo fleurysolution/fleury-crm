@@ -82,28 +82,37 @@ class RFIs extends BaseAppController
      */
     public function respond(int $id): \CodeIgniter\HTTP\Response
     {
-        $rfiModel = new RFIModel();
-        $rfi      = $rfiModel->find($id);
-        if (!$rfi) return $this->response->setJSON(['success' => false]);
+        try {
+            $rfiModel = new RFIModel();
+            $rfi      = $rfiModel->find($id);
+            if (!$rfi) return $this->response->setJSON(['success' => false, 'error' => 'RFI not found']);
 
-        $respModel = new RFIResponseModel();
-        $respId    = $respModel->insert([
-            'rfi_id'     => $id,
-            'user_id'    => $this->currentUser['id'],
-            'body'       => $this->request->getPost('body'),
-            'is_official'=> $this->request->getPost('is_official') ? 1 : 0,
-        ]);
+            $respModel = new RFIResponseModel();
+            $respId    = $respModel->insert([
+                'rfi_id'     => $id,
+                'user_id'    => $this->currentUser['id'] ?? 1,
+                'body'       => $this->request->getPost('body'),
+                'is_official'=> $this->request->getPost('is_official') ? 1 : 0,
+            ]);
 
-        // If official response, mark RFI as answered
-        if ($this->request->getPost('is_official') && $rfi['status'] !== 'closed') {
-            $rfiModel->update($id, ['status' => 'answered', 'answered_at' => date('Y-m-d H:i:s')]);
+            if (!$respId) {
+                return $this->response->setJSON(['success' => false, 'error' => 'Validation failed: ' . json_encode($respModel->errors())]);
+            }
+
+            // If official response, mark RFI as answered
+            if ($this->request->getPost('is_official') && $rfi['status'] !== 'closed') {
+                $rfiModel->update($id, ['status' => 'answered', 'answered_at' => date('Y-m-d H:i:s')]);
+            }
+
+            $resp = $respModel->select('rfi_responses.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS author_name')
+                ->join('fs_users','fs_users.id = rfi_responses.user_id','left')
+                ->find($respId);
+
+            return $this->response->setJSON(['success' => true, 'response' => $resp]);
+        } catch (\Throwable $e) {
+            log_message('error', '[RFIs::respond] ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
         }
-
-        $resp = $respModel->select('rfi_responses.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS author_name')
-            ->join('fs_users','fs_users.id = rfi_responses.user_id','left')
-            ->find($respId);
-
-        return $this->response->setJSON(['success' => true, 'response' => $resp]);
     }
 
     /**

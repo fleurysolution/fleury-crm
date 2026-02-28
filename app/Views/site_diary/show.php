@@ -154,6 +154,9 @@
 </template>
 
 <script>
+const CSRF_NAME = '<?= csrf_token() ?>';
+const CSRF_TOKEN = '<?= csrf_hash() ?>';
+
 function addRow() {
     const t = document.getElementById('templateRow');
     const clone = t.content.cloneNode(true);

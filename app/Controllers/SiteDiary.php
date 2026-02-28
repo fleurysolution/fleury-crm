@@ -28,7 +28,7 @@ class SiteDiary extends BaseAppController
     /**
      * GET /projects/:id/site-diary/create — new entry form (defaults to today)
      */
-    public function create(int $projectId): string
+    public function create(int $projectId)
     {
         $project = (new ProjectModel())->find($projectId);
         if (!$project) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
@@ -88,7 +88,7 @@ class SiteDiary extends BaseAppController
     public function show(int $projectId, int $diaryId): string
     {
         $diary = (new SiteDiaryModel())->find($diaryId);
-        if (!$diary || $diary['project_id'] !== $projectId) {
+        if (!$diary || $diary['project_id'] != $projectId) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
         $project = (new ProjectModel())->find($projectId);

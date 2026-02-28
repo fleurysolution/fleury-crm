@@ -141,7 +141,7 @@ $areas   = (new \App\Models\AreaModel())->where('project_id', $project['id'])->f
                 <select id="rfiAssignee" class="form-select">
                     <option value="">Unassigned</option>
                     <?php foreach ($users as $u): ?>
-                    <option value="<?= $u['id'] ?>"><?= esc($u['name']) ?></option>
+                    <option value="<?= $u['id'] ?>"><?= esc($u['first_name'] . ' ' . $u['last_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -181,7 +181,11 @@ function submitNewRfi() {
     fd.append('due_date',    document.getElementById('rfiDue').value);
     fd.append('area_id',     document.getElementById('rfiArea').value);
     fd.append('assigned_to', document.getElementById('rfiAssignee').value);
-    fetch(`/staging/public/projects/<?= $project['id'] ?>/rfis`, {method:'POST', body: fd})
+    fetch(`/staging/public/projects/<?= $project['id'] ?>/rfis`, {
+        method:'POST', 
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
         .then(r=>r.json()).then(d=>{
             if (d.success) location.reload();
             else alert('Could not create RFI.');
