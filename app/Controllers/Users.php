@@ -31,8 +31,10 @@ class Users extends BaseAppController
     {
         $roles = \Config\Database::connect()
             ->table('roles')->get()->getResultArray();
+        $clients = \Config\Database::connect()
+            ->table('clients')->select('id, company_name')->where('deleted_at IS NULL')->get()->getResultArray();
 
-        return $this->render('users/create', ['roles' => $roles]);
+        return $this->render('users/create', ['roles' => $roles, 'clients' => $clients]);
     }
 
     /**
@@ -57,6 +59,7 @@ class Users extends BaseAppController
             'password_hash' => password_hash($this->request->getPost('password'), PASSWORD_BCRYPT),
             'phone'      => $this->request->getPost('phone'),
             'status'     => $this->request->getPost('status') ?: 'active',
+            'client_id'  => $this->request->getPost('client_id') ?: null,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
@@ -95,7 +98,8 @@ class Users extends BaseAppController
         }
 
         $roles = $db->table('roles')->get()->getResultArray();
-        return $this->render('users/show', ['user' => $user, 'roles' => $roles]);
+        $clients = $db->table('clients')->select('id, company_name')->where('deleted_at IS NULL')->get()->getResultArray();
+        return $this->render('users/show', ['user' => $user, 'roles' => $roles, 'clients' => $clients]);
     }
 
     /**
@@ -110,6 +114,7 @@ class Users extends BaseAppController
             'email'      => $this->request->getPost('email'),
             'phone'      => $this->request->getPost('phone'),
             'status'     => $this->request->getPost('status') ?: 'active',
+            'client_id'  => $this->request->getPost('client_id') ?: null,
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 

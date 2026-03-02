@@ -242,6 +242,23 @@ $routes->post('submittals/(:num)/review',       'Submittals::review/$1',  ['filt
 $routes->post('submittals/(:num)/delete',       'Submittals::delete/$1',  ['filter' => 'auth']);
 $routes->get('projects/(:num)/submittals',      'Submittals::index/$1',   ['filter' => 'auth']);
 
+// ── Drawings ──────────────────────────────────────────────────────────────────
+$routes->post('projects/(:num)/drawings',       'Drawings::store/$1',         ['filter' => 'auth']);
+$routes->get('drawings/(:num)',                 'Drawings::show/$1',          ['filter' => 'auth']);
+$routes->post('drawings/(:num)/revisions',      'Drawings::uploadRevision/$1',['filter' => 'auth']);
+$routes->post('drawings/(:num)/delete',         'Drawings::delete/$1',        ['filter' => 'auth']);
+
+// ── Estimates & Bids ──────────────────────────────────────────────────────────
+$routes->post('projects/(:num)/estimates',      'Estimates::store/$1',        ['filter' => 'auth']);
+$routes->get('estimates/(:num)',                'Estimates::show/$1',         ['filter' => 'auth']);
+$routes->post('estimates/(:num)/items',         'Estimates::addItem/$1',      ['filter' => 'auth']);
+$routes->post('estimates/(:num)/items/(:num)/delete', 'Estimates::deleteItem/$1/$2', ['filter' => 'auth']);
+$routes->post('estimates/(:num)/delete',        'Estimates::delete/$1',       ['filter' => 'auth']);
+
+$routes->post('projects/(:num)/bids',           'Bids::store/$1',             ['filter' => 'auth']);
+$routes->post('bids/(:num)/status',             'Bids::updateStatus/$1',      ['filter' => 'auth']);
+$routes->post('bids/(:num)/delete',             'Bids::delete/$1',            ['filter' => 'auth']);
+
 // ── Punch List ────────────────────────────────────────────────────────────────
 $routes->post('projects/(:num)/punch-list',               'PunchList::store/$1',        ['filter' => 'auth']);
 $routes->get('projects/(:num)/punch-list',                'PunchList::index/$1',        ['filter' => 'auth']);
@@ -256,18 +273,20 @@ $routes->get('projects/(:num)/site-diary',                'SiteDiary::index/$1',
 $routes->get('projects/(:num)/site-diary/create',         'SiteDiary::create/$1',       ['filter' => 'auth']);
 $routes->post('projects/(:num)/site-diary',               'SiteDiary::store/$1',        ['filter' => 'auth']);
 $routes->get('projects/(:num)/site-diary/(:num)',          'SiteDiary::show/$1/$2',      ['filter' => 'auth']);
-$routes->post('projects/(:num)/site-diary/(:num)/update',  'SiteDiary::update/$1/$2',    ['filter' => 'auth']);
-$routes->post('projects/(:num)/site-diary/(:num)/submit',  'SiteDiary::submit/$1/$2',    ['filter' => 'auth']);
-$routes->post('projects/(:num)/site-diary/(:num)/approve', 'SiteDiary::approve/$1/$2',   ['filter' => 'auth']);
+    $routes->post('projects/(:num)/site-diary/(:num)/update',  'SiteDiary::update/$1/$2',    ['filter' => 'auth']);
+    $routes->post('projects/(:num)/site-diary/(:num)/submit',  'SiteDiary::submit/$1/$2',    ['filter' => 'auth']);
+    $routes->post('projects/(:num)/site-diary/(:num)/approve', 'SiteDiary::approve/$1/$2',   ['filter' => 'auth']);
 
 // ── Contracts ─────────────────────────────────────────────────────────────────
-$routes->get('projects/(:num)/contracts',              'Contracts::index/$1',           ['filter' => 'auth']);
-$routes->post('projects/(:num)/contracts',             'Contracts::store/$1',           ['filter' => 'auth']);
-$routes->get('contracts/(:num)',                       'Contracts::show/$1',            ['filter' => 'auth']);
-$routes->post('contracts/(:num)/status',               'Contracts::updateStatus/$1',    ['filter' => 'auth']);
-$routes->post('contracts/(:num)/amend',                'Contracts::amend/$1',           ['filter' => 'auth']);
-$routes->post('contracts/amendments/(:num)/approve',   'Contracts::approveAmendment/$1',['filter' => 'auth']);
-$routes->post('contracts/(:num)/delete',               'Contracts::delete/$1',          ['filter' => 'auth']);
+$routes->post('projects/(:num)/contracts',      'Contracts::store/$1',        ['filter' => 'auth']);
+$routes->get('projects/(:num)/contracts',       'Contracts::index/$1',        ['filter' => 'auth']);
+$routes->post('contracts/(:num)/status',        'Contracts::updateStatus/$1', ['filter' => 'auth']);
+$routes->post('contracts/(:num)/amend',         'Contracts::amend/$1',        ['filter' => 'auth']);
+$routes->post('contracts/amendments/(:num)/approve', 'Contracts::approveAmendment/$1', ['filter' => 'auth']);
+$routes->post('contracts/(:num)/delete',        'Contracts::delete/$1',       ['filter' => 'auth']);
+$routes->post('contracts/(:num)/sign',          'Contracts::signContract/$1', ['filter' => 'auth']);
+$routes->get('contracts/(:num)/pdf',            'Contracts::downloadPdf/$1',  ['filter' => 'auth']);
+$routes->get('contracts/(:num)',                'Contracts::show/$1',         ['filter' => 'auth']);
 
 // ── BOQ ──────────────────────────────────────────────────────────────────────
 $routes->get('projects/(:num)/boq',                    'BOQ::index/$1',      ['filter' => 'auth']);
@@ -275,8 +294,14 @@ $routes->post('projects/(:num)/boq',                   'BOQ::save/$1',       ['f
 $routes->get('projects/(:num)/boq/export',             'BOQ::exportCsv/$1',  ['filter' => 'auth']);
 $routes->post('boq/(:num)/delete',                     'BOQ::delete/$1',     ['filter' => 'auth']);
 
-// ── Finance ──────────────────────────────────────────────────────────────────
+// ── Finance (SOV & Invoicing) ────────────────────────────────────────────────
 $routes->get('projects/(:num)/finance',                'Finance::index/$1',           ['filter' => 'auth']);
+$routes->post('projects/(:num)/sov',                   'Finance::storeSovItem/$1',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/sov/(:num)/delete',     'Finance::deleteSovItem/$1/$2',['filter' => 'auth']);
+$routes->post('projects/(:num)/pay-apps',              'Finance::createPayApp/$1',    ['filter' => 'auth']);
+$routes->get('finance/pay-apps/(:num)',                'Finance::showPayApp/$1',      ['filter' => 'auth']);
+$routes->get('finance/pay-apps/(:num)/pdf',            'Finance::exportPayAppPdf/$1', ['filter' => 'auth']);
+$routes->post('finance/pay-apps/(:num)/items',         'Finance::savePayAppItems/$1', ['filter' => 'auth']);
 $routes->get('projects/(:num)/finance/export',         'Finance::exportCsv/$1',       ['filter' => 'auth']);
 $routes->post('projects/(:num)/finance/certs',         'Finance::storeCert/$1',       ['filter' => 'auth']);
 $routes->post('finance/certs/(:num)/approve',          'Finance::approveCert/$1',     ['filter' => 'auth']);
@@ -286,7 +311,22 @@ $routes->post('finance/invoices/(:num)/mark-paid',     'Finance::markInvoicePaid
 $routes->post('projects/(:num)/finance/expenses',      'Finance::storeExpense/$1',    ['filter' => 'auth']);
 $routes->post('finance/expenses/(:num)/approve',       'Finance::approveExpense/$1',  ['filter' => 'auth']);
 
-// ── Reports & Dashboard ────────────────────────────────────────────────────────
+// ── Field Management (Punch & Diaries) ───────────────────────────────────────
+$routes->post('projects/(:num)/punch',                 'FieldManagement::storePunchList/$1',   ['filter' => 'auth']);
+$routes->post('punch/(:num)/status',                   'FieldManagement::updatePunchStatus/$1',['filter' => 'auth']);
+$routes->post('punch/(:num)/delete',                   'FieldManagement::deletePunchList/$1',  ['filter' => 'auth']);
+
+$routes->post('projects/(:num)/diaries',               'FieldManagement::createDiary/$1',      ['filter' => 'auth']);
+$routes->get('field/diary/(:num)',                     'FieldManagement::showDiary/$1',        ['filter' => 'auth']);
+$routes->post('field/diary/(:num)/save',               'FieldManagement::saveDiaryItems/$1',   ['filter' => 'auth']);
+
+// ── Procurement & Purchase Orders ────────────────────────────────────────────
+$routes->post('projects/(:num)/procurement/pos',       'Procurement::createPo/$1',     ['filter' => 'auth']);
+$routes->get('procurement/pos/(:num)',                 'Procurement::showPo/$1',       ['filter' => 'auth']);
+$routes->post('procurement/pos/(:num)/items',          'Procurement::savePoItems/$1',  ['filter' => 'auth']);
+$routes->get('procurement/pos/(:num)/pdf',             'Procurement::exportPoPdf/$1',  ['filter' => 'auth']);
+
+// ── Reports & Dashboard ──────────────────────────────────────────────────────
 $routes->get('reports',                               'Reports::index',              ['filter' => 'auth']);
 $routes->get('reports/json',                          'Reports::executiveJson',      ['filter' => 'auth']);
 $routes->get('projects/(:num)/report',                'Reports::project/$1',         ['filter' => 'auth']);

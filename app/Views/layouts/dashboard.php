@@ -33,13 +33,19 @@
         </div>
 
         <nav class="sidebar-nav">
-            <?php $uri = uri_string(); ?>
+            <?php 
+                $uri = uri_string();
+                $userRoleSlug = session()->get('role_slug') ?? 'employee';
+                $isExternal = in_array($userRoleSlug, ['subcontractor_vendor', 'client']);
+            ?>
 
             <div class="sidebar-category">Main</div>
             <a href="<?= site_url('dashboard') ?>"
                class="sidebar-link <?= $uri === 'dashboard' ? 'active' : '' ?>">
                 <i class="fa-solid fa-gauge"></i> Dashboard
             </a>
+            
+            <?php if (!$isExternal): ?>
             <a href="<?= site_url('leads') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'leads') ? 'active' : '' ?>">
                 <i class="fa-solid fa-filter"></i> Leads
@@ -48,10 +54,14 @@
                class="sidebar-link <?= str_starts_with($uri, 'clients') ? 'active' : '' ?>">
                 <i class="fa-solid fa-building"></i> Clients
             </a>
+            <?php endif; ?>
+
             <a href="<?= site_url('projects') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'projects') ? 'active' : '' ?>">
                 <i class="fa-solid fa-layer-group"></i> Projects
             </a>
+
+            <?php if (!$isExternal): ?>
             <a href="<?= site_url('timesheets') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'timesheets') ? 'active' : '' ?>">
                 <i class="fa-solid fa-clock"></i> Timesheets
@@ -117,6 +127,7 @@
                class="sidebar-link <?= ($uri === 'settings/construction') ? 'active' : '' ?>">
                 <i class="fa-solid fa-building-columns"></i> Construction
             </a>
+            <?php endif; ?>
 
         </nav>
 

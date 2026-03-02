@@ -481,6 +481,17 @@ class Mimes
             'model/stl',
             'application/octet-stream',
         ],
+        'dwg' => [
+            'application/acad',
+            'application/autocad_dwg',
+            'application/dwg',
+            'application/x-dwg',
+            'application/x-autocad',
+            'drawing/dwg',
+            'image/vnd.dwg',
+            'image/x-dwg',
+            'application/octet-stream',
+        ],
     ];
 
     /**

@@ -19,14 +19,25 @@ class RFIModel extends Model
     public function forProject(int $projectId): array
     {
         $db = \Config\Database::connect();
-        return $db->table('rfis')
+        $query = $db->table('rfis')
             ->select('rfis.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS submitter_name, CONCAT(a.first_name, " ", a.last_name) AS assignee_name')
             ->join('fs_users AS a', 'a.id = rfis.assigned_to', 'left')
             ->join('fs_users', 'fs_users.id = rfis.submitted_by', 'left')
             ->where('rfis.project_id', $projectId)
-            ->where('rfis.deleted_at IS NULL')
-            ->orderBy('rfis.id', 'DESC')
-            ->get()->getResultArray();
+            ->where('rfis.deleted_at IS NULL');
+            
+        // RBAC: If the user is a Subcontractor/Vendor, only show RFIs they're involved in
+        $userId = session()->get('user_id');
+        $roleSlug = session()->get('role_slug') ?? 'employee';
+        
+        if ($roleSlug === 'subcontractor_vendor') {
+            $query->groupStart()
+                  ->where('rfis.submitted_by', $userId)
+                  ->orWhere('rfis.assigned_to', $userId)
+                  ->groupEnd();
+        }
+
+        return $query->orderBy('rfis.id', 'DESC')->get()->getResultArray();
     }
 
     public function nextNumber(int $projectId): string

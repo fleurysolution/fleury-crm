@@ -58,19 +58,28 @@ $priorityBadge = ['low'=>'info','medium'=>'secondary','high'=>'warning','urgent'
 </div>
 
 <!-- Tabs -->
-<?php $tabList = [
-    'overview'   => ['Overview',   'fa-gauge'],
+<?php // Ensure we understand the user's role
+$userRoleSlug = session()->get('role_slug') ?? 'employee';
+$isExternal = in_array($userRoleSlug, ['subcontractor_vendor', 'client']);
+
+$tabList = [
+    'overview'   => ['Overview',   'fa-chart-pie'],
     'tasks'      => ['Tasks',      'fa-list-check'],
     'kanban'     => ['Kanban',     'fa-table-columns'],
     'gantt'      => ['Gantt',      'fa-bars-staggered'],
     'milestones' => ['Milestones', 'fa-flag'],
+    'drawings'   => ['Drawings',   'fa-compass-drafting'],
     'rfis'       => ['RFIs',       'fa-circle-question'],
-    'punch_list' => ['Punch List', 'fa-clipboard-check'],
-    'site_diary' => ['Site Diary', 'fa-book-open'],
+    'submittals' => ['Submittals', 'fa-file-signature'],
+    'estimates'  => ['Estimates',  'fa-file-invoice'],
+    'procurement'=> ['Procurement','fa-file-contract'],
+    'field'      => ['Field App',  'fa-helmet-safety'],
+    'files'      => ['Files',      'fa-folder-open'],
     'contracts'  => ['Contracts',  'fa-file-contract'],
-    'boq'        => ['BOQ',        'fa-table-list'],
-    'finance'    => ['Finance',    'fa-coins'],
-    'report'     => ['Report',     'fa-chart-bar'],
+    'boq'        => ['BOQ',        'fa-clipboard-list'],
+    'finance'    => ['Finance',    'fa-file-invoice-dollar'],
+    'notes'      => ['Notes',      'fa-note-sticky'],
+    'team'       => ['Team',       'fa-users'],
     'activity'   => ['Activity',   'fa-clock-rotate-left'],
     'areas'      => ['Areas',      'fa-sitemap'],
     'schedule'   => ['Schedule',   'fa-calendar-day'],
@@ -78,7 +87,17 @@ $priorityBadge = ['low'=>'info','medium'=>'secondary','high'=>'warning','urgent'
     'members'    => ['Team',       'fa-users'],
 ]; ?>
 <ul class="nav nav-tabs mb-3 border-bottom" id="projectTabs">
-    <?php foreach ($tabList as $slug => [$label, $icon]): ?>
+    <?php
+        if ($isExternal) {
+            $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'files'];
+            foreach (array_keys($tabList) as $key) {
+                if (!in_array($key, $allowedExternalTabs)) {
+                    unset($tabList[$key]);
+                }
+            }
+        }
+        
+        foreach ($tabList as $slug => [$label, $icon]): ?>
     <li class="nav-item">
         <a class="nav-link <?= $tab === $slug ? 'active fw-semibold' : '' ?>"
            href="<?= site_url("projects/{$project['id']}?tab={$slug}") ?>">
@@ -95,9 +114,12 @@ $priorityBadge = ['low'=>'info','medium'=>'secondary','high'=>'warning','urgent'
     case 'kanban':     include __DIR__ . '/tabs/kanban_inline.php'; break;
     case 'gantt':      include __DIR__ . '/tabs/gantt_inline.php'; break;
     case 'milestones': include __DIR__ . '/tabs/milestones_inline.php'; break;
+    case 'drawings':   include __DIR__ . '/tabs/drawings_inline.php'; break;
     case 'rfis':       include __DIR__ . '/tabs/rfis_inline.php'; break;
-    case 'punch_list': include __DIR__ . '/tabs/punch_list_inline.php'; break;
-    case 'site_diary': include __DIR__ . '/tabs/site_diary_inline.php'; break;
+    case 'submittals': include __DIR__ . '/tabs/submittals_inline.php'; break;
+    case 'estimates':  include __DIR__ . '/tabs/estimates_inline.php'; break;
+    case 'procurement':include __DIR__ . '/tabs/procurement_inline.php'; break;
+    case 'field':      include __DIR__ . '/tabs/field_inline.php'; break;
     case 'contracts':  include __DIR__ . '/tabs/contracts_inline.php'; break;
     case 'boq':        include __DIR__ . '/tabs/boq_inline.php'; break;
     case 'finance':    include __DIR__ . '/tabs/finance_inline.php'; break;

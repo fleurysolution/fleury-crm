@@ -12,6 +12,7 @@ class ContractAmendmentModel extends Model
     protected $allowedFields = [
         'contract_id','amendment_no','title','description',
         'value_change','time_change','status','approved_by','approved_at',
+        'signed_at', 'signature_ip', 'signature_data',
     ];
 
     public function forContract(int $contractId): array

@@ -21,6 +21,17 @@ class ApprovalService
         $this->audit    = new FsAuditEventModel();
     }
 
+    public function createRequest(string $title, string $description, int $workflowId, int $userId): array
+    {
+        // Add basic implementation or return error since it's missing from original codebase
+        return ['success' => false, 'errors' => ['createRequest Not implemented yet.']];
+    }
+
+    public function addComment(int $requestId, int $userId, string $comment): array
+    {
+        return ['success' => false, 'errors' => ['addComment Not implemented yet.']];
+    }
+
     public function listRequests(int $limit = 50): array
     {
         return $this->requests
@@ -41,7 +52,17 @@ class ApprovalService
         return $request;
     }
 
-    public function actOnCurrentStep(int $requestId, int $actorUserId, string $actionStatus, ?string $note = null): array
+    public function approveRequest(int $requestId, int $actorUserId, ?string $note, ?string $signature = null): array
+    {
+        return $this->actOnCurrentStep($requestId, $actorUserId, ApprovalStatus::STEP_APPROVED, $note, $signature);
+    }
+
+    public function rejectRequest(int $requestId, int $actorUserId, ?string $note): array
+    {
+        return $this->actOnCurrentStep($requestId, $actorUserId, ApprovalStatus::STEP_REJECTED, $note, null);
+    }
+
+    public function actOnCurrentStep(int $requestId, int $actorUserId, string $actionStatus, ?string $note = null, ?string $signatureParams = null): array
     {
         if (!in_array($actionStatus, [ApprovalStatus::STEP_APPROVED, ApprovalStatus::STEP_REJECTED], true)) {
             return ['success' => false, 'errors' => ['Invalid action status.']];
@@ -76,13 +97,22 @@ class ApprovalService
         $db->transStart();
 
         // Update step
-        $this->steps->update((int)$step['id'], [
+        // Update step
+        $updateData = [
             'status'     => $actionStatus,
             'acted_by'   => $actorUserId,
             'acted_at'   => date('Y-m-d H:i:s'),
             'action_note'=> $note,
             'updated_at' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+        
+        if ($signatureParams) {
+            $updateData['signature_data'] = $signatureParams;
+            $updateData['signature_ip']   = service('request')->getIPAddress();
+            $updateData['signed_at']      = date('Y-m-d H:i:s');
+        }
+
+        $this->steps->update((int)$step['id'], $updateData);
 
         if ($actionStatus === ApprovalStatus::STEP_REJECTED) {
             // whole request rejected
@@ -96,6 +126,13 @@ class ApprovalService
                 'completed_at' => date('Y-m-d H:i:s'),
                 'updated_at'   => date('Y-m-d H:i:s'),
             ]);
+
+            \App\Models\NotificationModel::send(
+                $request['requested_by'],
+                'approval_rejected',
+                "Your Approval Request #{$requestId} was declined",
+                ['url' => "approval/view/{$requestId}", 'body' => $note ?: '']
+            );
 
             $message = 'Request rejected successfully.';
         } else {
@@ -123,6 +160,14 @@ class ApprovalService
                     'completed_at' => date('Y-m-d H:i:s'),
                     'updated_at'   => date('Y-m-d H:i:s'),
                 ]);
+
+                \App\Models\NotificationModel::send(
+                    $request['requested_by'],
+                    'approval_approved',
+                    "Your Approval Request #{$requestId} was fully approved",
+                    ['url' => "approval/view/{$requestId}"]
+                );
+
                 $message = 'Request approved successfully.';
             }
         }

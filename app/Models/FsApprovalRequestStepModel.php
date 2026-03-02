@@ -20,6 +20,9 @@ class FsAsApprovalRequestStepModel extends Model
         'due_at',
         'created_at',
         'updated_at',
+        'signed_at',
+        'signature_ip',
+        'signature_data',
     ];
 
     protected $useTimestamps  = true;

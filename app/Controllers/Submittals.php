@@ -39,10 +39,19 @@ class Submittals extends BaseAppController
         $project   = (new ProjectModel())->find($submittal['project_id']);
         $revisions = (new SubmittalRevisionModel())->forSubmittal($id);
 
+        $db = \Config\Database::connect();
+        $members = $db->table('project_members')->select('fs_users.id as user_id, fs_users.first_name, fs_users.last_name, roles.name as role, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS name')
+            ->join('fs_users', 'fs_users.id = project_members.user_id')
+            ->join('user_roles', 'user_roles.user_id = fs_users.id', 'left')
+            ->join('roles', 'roles.id = user_roles.role_id', 'left')
+            ->where('project_members.project_id', $submittal['project_id'])
+            ->get()->getResultArray();
+
         return $this->render('submittals/show', [
             'project'   => $project,
             'submittal' => $submittal,
             'revisions' => $revisions,
+            'members'   => $members,
         ]);
     }
 
@@ -89,26 +98,82 @@ class Submittals extends BaseAppController
         $sub      = $subModel->find($id);
         if (!$sub) return $this->response->setJSON(['success' => false]);
 
-        $status  = $this->request->getPost('status');
-        $notes   = $this->request->getPost('notes');
-        $newRev  = (int)$sub['current_revision'] + 1;
+        $status    = $this->request->getPost('status');
+        $forwardTo = $this->request->getPost('forward_to');
+        $notes     = $this->request->getPost('notes');
+        $sigData   = $this->request->getPost('signature_data');
+        $newRev    = (int)$sub['current_revision'] + 1;
 
-        (new SubmittalRevisionModel())->insert([
+        $revData = [
             'submittal_id' => $id,
             'revision_no'  => $newRev,
             'status'       => $status,
             'reviewer_id'  => $this->currentUser['id'],
             'reviewed_at'  => date('Y-m-d H:i:s'),
             'notes'        => $notes,
-        ]);
+        ];
 
-        $subModel->update($id, [
-            'status'           => $status,
+        if ($sigData) {
+            $revData['signature_data'] = $sigData;
+            $revData['signature_ip']   = $this->request->getIPAddress();
+            $revData['signed_at']      = date('Y-m-d H:i:s');
+        }
+
+        // Record the current reviewer's decision in the revision history
+        (new SubmittalRevisionModel())->insert($revData);
+
+        // Update the master submittal record
+        $updateData = [
             'current_revision' => $newRev,
-            'reviewer_id'      => $this->currentUser['id'],
-        ]);
+        ];
+        
+        if ($forwardTo) {
+            // If forwarded to someone else, status remains "under_review" for the next person
+            $updateData['status']      = 'under_review';
+            $updateData['reviewer_id'] = $forwardTo;
+        } else {
+            // Otherwise, apply the final decision to the submittal
+            $updateData['status']      = $status;
+            $updateData['reviewer_id'] = $this->currentUser['id'];
+        }
 
-        return $this->response->setJSON(['success' => true, 'status' => $status, 'revision' => $newRev]);
+        $subModel->update($id, $updateData);
+
+        // Send notifications
+        $creatorId = $sub['submitted_by'];
+        $title = "Submittal #{$sub['submittal_number']} Reviewed: " . ucfirst(str_replace('_', ' ', $status));
+        $url = "submittals/{$id}";
+        
+        if ($forwardTo) {
+            // Notify the new reviewer
+            \App\Models\NotificationModel::send(
+                $forwardTo,
+                'submittal_forwarded',
+                "Submittal #{$sub['submittal_number']} forwarded to you for review",
+                ['url' => $url, 'body' => $notes ?: '']
+            );
+            // Notify the creator that it was forwarded
+            if (current_user_id() !== $creatorId) {
+                \App\Models\NotificationModel::send(
+                    $creatorId,
+                    'submittal_forwarded_creator',
+                    "Submittal #{$sub['submittal_number']} was forwarded for further review",
+                    ['url' => $url]
+                );
+            }
+        } else {
+            // Final decision applied
+            if (current_user_id() !== $creatorId) {
+                \App\Models\NotificationModel::send(
+                    $creatorId,
+                    'submittal_reviewed',
+                    $title,
+                    ['url' => $url, 'body' => $notes ?: 'Decision: ' . $status]
+                );
+            }
+        }
+
+        return $this->response->setJSON(['success' => true, 'status' => $updateData['status'], 'revision' => $newRev]);
     }
 
     /**

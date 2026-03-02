@@ -77,6 +77,18 @@
                                 <option value="inactive" <?= ($user['status']??'')==='inactive' ? 'selected':'' ?>>Inactive</option>
                             </select>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Associated Client / Vendor</label>
+                            <select name="client_id" class="form-select">
+                                <option value="">— Internal Employee (None) —</option>
+                                <?php if(isset($clients)): foreach ($clients as $c): ?>
+                                <option value="<?= (int)$c['id'] ?>" <?= ($user['client_id']??null)==$c['id'] ? 'selected':'' ?>>
+                                    <?= esc($c['company_name']) ?>
+                                </option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                            <div class="form-text" style="font-size: 0.75rem;">Only required for external Portal Users.</div>
+                        </div>
                     </div>
                     <div class="mt-3 d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>

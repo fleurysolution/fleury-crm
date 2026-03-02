@@ -1,258 +1,188 @@
 <?php
-// app/Views/projects/tabs/finance_inline.php
-$certModel  = new \App\Models\PaymentCertificateModel();
-$invModel   = new \App\Models\InvoiceModel();
-$expModel   = new \App\Models\ProjectExpenseModel();
-$boqModel   = new \App\Models\BOQItemModel();
+$sModel = new \App\Models\SovItemModel();
+$pModel = new \App\Models\PayAppModel();
 
-$certs      = $certModel->forProject($project['id']);
-$totalPaid  = $certModel->totalPaid($project['id']);
+$sovItems = $sModel->forProject($project['id']);
+$payApps  = $pModel->forProject($project['id']);
 
-$invTotals  = $invModel->totalByDirection($project['id']);
-$invoices   = $invModel->forProject($project['id']);
-
-$expenses   = $expModel->forProject($project['id'], 'pending');
-$expTotal   = $expModel->totalApproved($project['id']);
-$expByCat   = $expModel->totalByCategory($project['id']);
-
-$boqTotal   = $boqModel->totalBOQ($project['id']);
-
-$statusBadge = [
-    'draft'=>'secondary','submitted'=>'primary','approved'=>'info','paid'=>'success',
-    'sent'=>'primary','partial'=>'warning','overdue'=>'danger','void'=>'dark','pending'=>'warning',
-];
+$totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
 ?>
 
-<!-- KPI Cards row -->
-<div class="row g-3 mb-4">
-    <?php foreach ([
-        ['Contract Value', number_format($boqTotal,2), 'primary',   'fa-file-contract'],
-        ['Certs Paid',     number_format($totalPaid,2),'success',   'fa-check-circle'],
-        ['Income Billed',  number_format($invTotals['income']['total'],2), 'info', 'fa-arrow-up'],
-        ['Expenses',       number_format($expTotal,2), 'danger',    'fa-arrow-down'],
-    ] as [$label,$val,$col,$icon]): ?>
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;">
-            <i class="fa-solid <?= $icon ?> fa-lg text-<?= $col ?> mb-1"></i>
-            <div class="fw-bold fs-5"><?= $val ?></div>
-            <div class="text-muted small"><?= $label ?></div>
+<div class="row g-4">
+    <!-- Left Column: Master Schedule of Values (SOV) -->
+    <div class="col-lg-7">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Schedule of Values (Contract Breakdown)</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newSovModal">
+                <i class="fa-solid fa-plus me-1"></i> Add SOV Line
+            </button>
         </div>
-    </div>
-    <?php endforeach; ?>
-</div>
 
-<!-- Tabs: Certificates / Invoices / Expenses -->
-<ul class="nav nav-tabs border-0 mb-3" id="finTab">
-    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#finCerts">Payment Certs</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#finInvoices">Invoices</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#finExpenses">Expenses <?= count($expenses) > 0 ? '<span class="badge bg-warning text-dark ms-1">'.count($expenses).'</span>' : '' ?></a></li>
-</ul>
-
-<div class="tab-content">
-
-<!-- Certs tab -->
-<div class="tab-pane fade show active" id="finCerts">
-    <div class="d-flex justify-content-end mb-2">
-        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newCertModal">
-            <i class="fa-solid fa-plus me-1"></i>New IPC
-        </button>
-    </div>
-    <?php if (empty($certs)): ?>
-    <div class="text-center py-4 text-muted">No payment certificates yet.</div>
-    <?php else: ?>
-    <table class="table table-hover small align-middle">
-        <thead class="table-light"><tr><th>Number</th><th>Period</th><th>Gross</th><th>Retention</th><th>Net</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-        <?php foreach ($certs as $c): ?>
-        <tr>
-            <td class="fw-semibold"><?= esc($c['cert_number']) ?></td>
-            <td class="text-muted"><?= ($c['period_from']??'') ?> — <?= ($c['period_to']??'') ?></td>
-            <td><?= number_format($c['gross_amount'],2) ?></td>
-            <td class="text-danger">(<?= number_format($c['retention_amount'],2) ?>)</td>
-            <td class="fw-semibold"><?= number_format($c['net_amount'],2) ?></td>
-            <td><span class="badge bg-<?= $statusBadge[$c['status']]??'secondary' ?>-subtle text-<?= $statusBadge[$c['status']]??'secondary' ?>"><?= ucfirst($c['status']) ?></span></td>
-            <td>
-                <?php if ($c['status']==='submitted'): ?>
-                <button class="btn btn-xs btn-success" onclick="certAction(<?= $c['id'] ?>,'approve')">Approve</button>
-                <?php elseif ($c['status']==='approved'): ?>
-                <button class="btn btn-xs btn-primary" onclick="certAction(<?= $c['id'] ?>,'mark-paid')">Mark Paid</button>
-                <?php endif; ?>
-            </td>
-        </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-    <?php endif; ?>
-</div>
-
-<!-- Invoices tab -->
-<div class="tab-pane fade" id="finInvoices">
-    <div class="d-flex justify-content-end mb-2">
-        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newInvModal">
-            <i class="fa-solid fa-plus me-1"></i>New Invoice
-        </button>
-    </div>
-    <?php if (empty($invoices)): ?>
-    <div class="text-center py-4 text-muted">No invoices yet.</div>
-    <?php else: ?>
-    <table class="table table-hover small align-middle">
-        <thead class="table-light"><tr><th>Number</th><th>Direction</th><th>Party</th><th>Date</th><th>Total</th><th>Paid</th><th>Status</th></tr></thead>
-        <tbody>
-        <?php foreach ($invoices as $inv): ?>
-        <tr>
-            <td class="fw-semibold"><?= esc($inv['invoice_number']) ?></td>
-            <td><span class="badge bg-<?= $inv['direction']==='income'?'success':'danger' ?>-subtle text-<?= $inv['direction']==='income'?'success':'danger' ?>"><?= ucfirst($inv['direction']) ?></span></td>
-            <td><?= esc($inv['party_name']??'—') ?></td>
-            <td><?= $inv['invoice_date'] ? date('d M y', strtotime($inv['invoice_date'])) : '—' ?></td>
-            <td><?= number_format($inv['total_amount'],2) ?></td>
-            <td><?= number_format($inv['paid_amount'],2) ?></td>
-            <td><span class="badge bg-<?= $statusBadge[$inv['status']]??'secondary' ?>-subtle text-<?= $statusBadge[$inv['status']]??'secondary' ?>"><?= ucfirst($inv['status']) ?></span></td>
-        </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-    <?php endif; ?>
-</div>
-
-<!-- Expenses tab -->
-<div class="tab-pane fade" id="finExpenses">
-    <div class="d-flex justify-content-end mb-2">
-        <a href="<?= site_url("projects/{$project['id']}/finance/export") ?>" class="btn btn-sm btn-outline-secondary me-1">
-            <i class="fa-solid fa-download me-1"></i>CSV Report
-        </a>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newExpModal">
-            <i class="fa-solid fa-plus me-1"></i>Add Expense
-        </button>
-    </div>
-    <?php if (empty($expenses)): ?>
-    <div class="text-center py-4 text-muted">No pending expenses.</div>
-    <?php else: ?>
-    <table class="table table-hover small align-middle">
-        <thead class="table-light"><tr><th>Date</th><th>Category</th><th>Description</th><th>Vendor</th><th>Amount</th><th>By</th><th></th></tr></thead>
-        <tbody>
-        <?php foreach ($expenses as $ex): ?>
-        <tr>
-            <td><?= $ex['expense_date'] ? date('d M y', strtotime($ex['expense_date'])) : '—' ?></td>
-            <td><?= esc($ex['category']??'—') ?></td>
-            <td><?= esc($ex['description']) ?></td>
-            <td><?= esc($ex['vendor']??'—') ?></td>
-            <td class="fw-semibold"><?= number_format($ex['amount'],2) ?></td>
-            <td class="text-muted"><?= esc($ex['submitter_name']??'') ?></td>
-            <td>
-                <button class="btn btn-xs btn-success" onclick="approveExpense(<?= $ex['id'] ?>)">Approve</button>
-            </td>
-        </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-    <?php endif; ?>
-</div>
-
-</div><!-- .tab-content -->
-
-<!-- Modals -->
-<div class="modal fade" id="newCertModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content border-0 shadow">
-    <div class="modal-header border-0"><h6 class="modal-title fw-semibold">New Payment Certificate (IPC)</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <div class="row g-2">
-            <div class="col-6"><label class="form-label small">Period From</label><input type="date" id="certFrom" class="form-control form-control-sm"></div>
-            <div class="col-6"><label class="form-label small">Period To</label><input type="date" id="certTo" class="form-control form-control-sm"></div>
-            <div class="col-6"><label class="form-label small">Gross Amount</label><input type="number" id="certGross" class="form-control form-control-sm" step="0.01"></div>
-            <div class="col-6"><label class="form-label small">Retention %</label><input type="number" id="certRet" class="form-control form-control-sm" value="10" step="0.01"></div>
-            <div class="col-12"><label class="form-label small">Notes</label><textarea id="certNotes" class="form-control form-control-sm" rows="2"></textarea></div>
-        </div>
-    </div>
-    <div class="modal-footer border-0">
-        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-sm btn-primary" onclick="submitCert()">Submit IPC</button>
-    </div>
-</div></div></div>
-
-<div class="modal fade" id="newInvModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content border-0 shadow">
-    <div class="modal-header border-0"><h6 class="modal-title fw-semibold">New Invoice</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <div class="row g-2">
-            <div class="col-6"><label class="form-label small">Direction</label>
-                <select id="invDir" class="form-select form-select-sm"><option value="income">Income</option><option value="expense">Expense</option></select>
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-3 pe-0" style="width: 80px;">Item No.</th>
+                            <th>Description of Work</th>
+                            <th class="text-end text-primary" style="width: 150px;">Scheduled Value</th>
+                            <th class="text-end pe-3" style="width: 70px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($sovItems)): ?>
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-list-ul fs-3 d-block mb-2"></i>
+                                    No SOV items established for this contract yet.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($sovItems as $item): ?>
+                                <tr>
+                                    <td class="ps-3 pe-0 fw-bold text-muted"><?= esc($item['item_no']) ?></td>
+                                    <td class="fw-medium"><?= esc($item['description']) ?></td>
+                                    <td class="text-end fw-bold text-dark">$<?= number_format($item['scheduled_value'], 2) ?></td>
+                                    <td class="text-end pe-3">
+                                        <form action="<?= site_url("projects/{$project['id']}/sov/{$item['id']}/delete") ?>" method="POST" onsubmit="return confirm('Delete this SOV line? Note: Do not delete lines that have progress billed against them.');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="fa-solid fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                    <?php if (!empty($sovItems)): ?>
+                    <tfoot class="bg-light">
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold">Original Contract Total:</td>
+                            <td class="text-end fw-bold fs-5 text-success">$<?= number_format($totalScheduledValue, 2) ?></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    <?php endif; ?>
+                </table>
             </div>
-            <div class="col-6"><label class="form-label small">Party</label><input type="text" id="invParty" class="form-control form-control-sm"></div>
-            <div class="col-6"><label class="form-label small">Invoice Date</label><input type="date" id="invDate" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>"></div>
-            <div class="col-6"><label class="form-label small">Due Date</label><input type="date" id="invDue" class="form-control form-control-sm"></div>
-            <div class="col-6"><label class="form-label small">Subtotal</label><input type="number" id="invSub" class="form-control form-control-sm" step="0.01"></div>
-            <div class="col-6"><label class="form-label small">Tax</label><input type="number" id="invTax" class="form-control form-control-sm" step="0.01" value="0"></div>
         </div>
     </div>
-    <div class="modal-footer border-0">
-        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-sm btn-primary" onclick="submitInvoice()">Create</button>
-    </div>
-</div></div></div>
 
-<div class="modal fade" id="newExpModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content border-0 shadow">
-    <div class="modal-header border-0"><h6 class="modal-title fw-semibold">Add Expense</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <div class="row g-2">
-            <div class="col-6"><label class="form-label small">Category</label><input type="text" id="expCat" class="form-control form-control-sm" placeholder="Labour, Material…"></div>
-            <div class="col-6"><label class="form-label small">Date</label><input type="date" id="expDate" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>"></div>
-            <div class="col-12"><label class="form-label small">Description <span class="text-danger">*</span></label><input type="text" id="expDesc" class="form-control form-control-sm"></div>
-            <div class="col-6"><label class="form-label small">Vendor</label><input type="text" id="expVendor" class="form-control form-control-sm"></div>
-            <div class="col-6"><label class="form-label small">Amount</label><input type="number" id="expAmt" class="form-control form-control-sm" step="0.01"></div>
+    <!-- Right Column: Payment Applications (Pay Apps) -->
+    <div class="col-lg-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Payment Applications</h5>
+            <?php if (!empty($sovItems)): ?>
+            <button class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#newPayAppModal">
+                <i class="fa-solid fa-file-invoice-dollar me-1"></i> Generate Pay App
+            </button>
+            <?php endif; ?>
         </div>
-    </div>
-    <div class="modal-footer border-0">
-        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-sm btn-primary" onclick="submitExpense()">Submit</button>
-    </div>
-</div></div></div>
 
-<script>
-const projectId = <?= $project['id'] ?>;
-function post(url, data={}) {
-    const fd = new FormData();
-    fd.append(CSRF_NAME, CSRF_TOKEN);
-    Object.entries(data).forEach(([k,v]) => fd.append(k,v));
-    return fetch(url, {method:'POST', body: fd}).then(r=>r.json());
-}
-function certAction(id, action) {
-    post(`/staging/public/finance/certs/${id}/${action}`).then(d => { if(d.success) location.reload(); });
-}
-function approveExpense(id) {
-    post(`/staging/public/finance/expenses/${id}/approve`).then(d => { if(d.success) location.reload(); });
-}
-function submitCert() {
-    post(`/staging/public/projects/${projectId}/finance/certs`, {
-        period_from: document.getElementById('certFrom').value,
-        period_to:   document.getElementById('certTo').value,
-        gross_amount:document.getElementById('certGross').value,
-        retention_pct: document.getElementById('certRet').value,
-        notes:       document.getElementById('certNotes').value,
-    }).then(d => { if(d.success) location.reload(); });
-}
-function submitInvoice() {
-    post(`/staging/public/projects/${projectId}/finance/invoices`, {
-        direction:    document.getElementById('invDir').value,
-        party_name:   document.getElementById('invParty').value,
-        invoice_date: document.getElementById('invDate').value,
-        due_date:     document.getElementById('invDue').value,
-        subtotal:     document.getElementById('invSub').value,
-        tax_amount:   document.getElementById('invTax').value,
-    }).then(d => { if(d.success) location.reload(); });
-}
-function submitExpense() {
-    const desc = document.getElementById('expDesc').value.trim();
-    if (!desc) { alert('Enter a description.'); return; }
-    post(`/staging/public/projects/${projectId}/finance/expenses`, {
-        category:     document.getElementById('expCat').value,
-        description:  desc,
-        expense_date: document.getElementById('expDate').value,
-        vendor:       document.getElementById('expVendor').value,
-        amount:       document.getElementById('expAmt').value,
-    }).then(d => { if(d.success) location.reload(); });
-}
-</script>
+        <?php if (empty($sovItems)): ?>
+            <div class="alert alert-warning border-0">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i> You must build the Contract Schedule of Values (SOV) before generating progress invoices.
+            </div>
+        <?php elseif (empty($payApps)): ?>
+            <div class="card border-0 shadow-sm p-4 text-center text-muted">
+                <i class="fa-solid fa-receipt fs-3 d-block mb-3"></i>
+                No payment applications generated yet.
+            </div>
+        <?php else: ?>
+            <div class="list-group list-group-flush shadow-sm rounded-3">
+                <?php foreach ($payApps as $app): ?>
+                    <div class="list-group-item p-3 border-0 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="fw-bold mb-1">
+                                    <a href="<?= site_url("finance/pay-apps/{$app['id']}") ?>" class="text-decoration-none">Application #<?= str_pad($app['application_no'], 3, '0', STR_PAD_LEFT) ?></a>
+                                </h6>
+                                <div class="small text-muted">Period To: <?= date('M d, Y', strtotime($app['period_to'])) ?></div>
+                            </div>
+                            <?php 
+                                $badgeClass = 'bg-secondary';
+                                if ($app['status'] === 'Submitted') $badgeClass = 'bg-primary-subtle text-primary';
+                                if ($app['status'] === 'Approved') $badgeClass = 'bg-success-subtle text-success';
+                                if ($app['status'] === 'Paid') $badgeClass = 'bg-success';
+                                if ($app['status'] === 'Rejected') $badgeClass = 'bg-danger';
+                            ?>
+                            <span class="badge <?= $badgeClass ?>"><?= esc($app['status']) ?></span>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <a href="<?= site_url("finance/pay-apps/{$app['id']}") ?>" class="btn btn-sm btn-outline-primary w-100">
+                                Open Worksheet
+                            </a>
+                            <!-- Print PDF button -->
+                            <a href="<?= site_url("finance/pay-apps/{$app['id']}/pdf") ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="Export PDF">
+                                <i class="fa-solid fa-print"></i>
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- New SOV Line Modal -->
+<div class="modal fade" id="newSovModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="<?= site_url("projects/{$project['id']}/sov") ?>" method="POST" class="modal-content border-0 shadow">
+            <?= csrf_field() ?>
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold">Add Schedule of Values Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-4">
+                        <label class="form-label small fw-bold">Item No.</label>
+                        <input type="text" name="item_no" class="form-control" placeholder="1, 2, A..." required>
+                    </div>
+                    <div class="col-8">
+                        <label class="form-label small fw-bold">Scheduled Value ($)</label>
+                        <input type="number" step="0.01" min="0" name="scheduled_value" class="form-control" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Description of Work</label>
+                    <input type="text" name="description" class="form-control" placeholder="e.g. Demolition & Site Grading" required>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Row</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Generate Pay App Modal -->
+<div class="modal fade" id="newPayAppModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="<?= site_url("projects/{$project['id']}/pay-apps") ?>" method="POST" class="modal-content border-0 shadow">
+            <?= csrf_field() ?>
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold">Generate Payment Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3">This will create a new draft invoice allowing you to bill against your Master SOV lines.</p>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Period To (Date)</label>
+                    <input type="date" name="period_to" class="form-control" required value="<?= date('Y-m-d') ?>">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Retainage Percentage (%)</label>
+                    <input type="number" step="0.01" min="0" max="100" name="retainage_percentage" class="form-control" value="10.00" required>
+                    <div class="form-text">Standard retention held back on this invoice (e.g. 10%).</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-dark d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-file-invoice"></i> Create Draft
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

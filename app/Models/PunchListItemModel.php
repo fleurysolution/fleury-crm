@@ -27,6 +27,18 @@ class PunchListItemModel extends Model
             ->where('punch_list_items.project_id', $projectId)
             ->where('punch_list_items.deleted_at IS NULL');
         if ($status) $q = $q->where('punch_list_items.status', $status);
+        
+        // RBAC: If the user is a Subcontractor/Vendor, only show items they're involved in
+        $userId = session()->get('user_id');
+        $roleSlug = session()->get('role_slug') ?? 'employee';
+        
+        if ($roleSlug === 'subcontractor_vendor') {
+            $q->groupStart()
+              ->where('punch_list_items.reported_by', $userId)
+              ->orWhere('punch_list_items.assigned_to', $userId)
+              ->groupEnd();
+        }
+
         return $q->orderBy('punch_list_items.id', 'DESC')->get()->getResultArray();
     }
 

@@ -72,9 +72,10 @@ class Approval extends BaseController
      */
     public function approve(int $id): RedirectResponse
     {
-        $comment = trim((string) $this->request->getPost('comment'));
+        $note = trim((string) $this->request->getPost('note'));
+        $signature = $this->request->getPost('signature_data');
 
-        $result = $this->approvalService->approveRequest($id, user_id(), $comment);
+        $result = $this->approvalService->approveRequest($id, user_id(), $note, $signature);
 
         if (!$result['success']) {
             return redirect()->to(site_url('approval/view/' . $id))
@@ -91,9 +92,9 @@ class Approval extends BaseController
      */
     public function reject(int $id): RedirectResponse
     {
-        $comment = trim((string) $this->request->getPost('comment'));
+        $note = trim((string) $this->request->getPost('note'));
 
-        $result = $this->approvalService->rejectRequest($id, user_id(), $comment);
+        $result = $this->approvalService->rejectRequest($id, user_id(), $note);
 
         if (!$result['success']) {
             return redirect()->to(site_url('approval/view/' . $id))
