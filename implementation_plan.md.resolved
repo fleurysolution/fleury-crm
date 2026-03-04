@@ -1,0 +1,95 @@
+# Advanced CRM Enhancements Roadmap
+
+The user has identified several critical missing components to elevate the CRM to a fully mature construction management platform. This document outlines the implementation plan for delivering these advanced features.
+
+## Proposed Changes
+
+### Phase 12: Advanced Task Management (Media & Attachments)
+Currently, tasks and comments are text-only. We need to support rich media.
+- **Database**: 
+  - Update `task_attachments` (if exists) or create it to link files to `task_id`.
+  - Update `task_comments` to support an `attachment_path` column.
+- **UI/Controllers**:
+  - Implement a drag-and-drop file uploader (Dropzone.js or similar) on the Task Details modal.
+  - Allow uploading images directly inline within task comments.
+  - Display image thumbnails in the task discussion thread.
+
+### Phase 12.1: Asana-style Task Improvements & Bug Fixes
+The user requested more advanced rich-text capabilities, multiple file uploads, and fixes to existing bugs.
+- **Rich Text Editor**:
+  - Integrate a rich text editor (e.g., Summernote or Quill via CDN) into [layouts/dashboard.php](file:///c:/wamp64/www/staging/app/Views/layouts/dashboard.php).
+  - Apply the editor to the Task Description field on creation/editing and the Comments textarea in the Task Modal ([projects/show.php](file:///c:/wamp64/www/staging/app/Views/projects/show.php)).
+- **Multiple File Uploads**:
+  - Modify the `taskFile` input to accept `multiple` files.
+  - Update the `Tasks::upload` controller method to iterate through a file array and insert multiple records into `task_attachments`.
+- **Task Editing**:
+  - Add an "Edit" button or inline editing capabilities to the Task Modal to allow updating the Title, Description, Dates, and Assignees after creation.
+- **Bug Fixes**:
+  - **Checklists**: Fix the `toggleChecklist` JavaScript function in [show.php](file:///c:/wamp64/www/staging/app/Views/drawings/show.php) which is currently passing the `item_id` into the URL instead of the `task_id`, causing a 404 or backend failure.
+  - **Kanban Drag & Drop**: Fix the HTML5 drag/drop events in [kanban_inline.php](file:///c:/wamp64/www/staging/app/Views/projects/tabs/kanban_inline.php). Specifically, ensure both `dragenter` and `dragover` prevent default behavior, and ensure card IDs are passing correctly to the column drop zones.
+
+### Phase 12.2: Extended Task Fields & Milestone Progress
+The task model requires more detailed parameters matching robust project management systems. We also need to visualize task completion horizontally against Project Milestones.
+
+- **Database (`tasks` table)**:
+  - Add `points` (INT)
+  - Add `milestone_id` (INT, nullable, FK to `project_milestones`)
+  - Add `labels` (VARCHAR string or JSON)
+  - Add `start_date` (DATE)
+  - Add `start_time` (TIME)
+  - Add `end_time` (TIME - combined with `due_date` for Deadline)
+  - Add `recurring_rule` (VARCHAR)
+  
+- **Database (`task_collaborators` table)**:
+  - Create a new table associating `task_id` -> [user_id](file:///c:/wamp64/www/staging/app/Models/FsUserModel.php#65-72) for extra collaborators.
+
+- **Task Controllers & Views**:
+  - Update [projects/show.php](file:///c:/wamp64/www/staging/app/Views/projects/show.php) (Task Details Modal + Create Task Modal) to include dropdowns/inputs for Milestones, Start/End Times, Collaborators, Points, and Labels.
+  - Update [Tasks.php](file:///c:/wamp64/www/staging/app/Controllers/Tasks.php) endpoints to save these fields.
+
+- **Milestone View Update**:
+  - In [projects/tabs/milestones_inline.php](file:///c:/wamp64/www/staging/app/Views/projects/tabs/milestones_inline.php), display a Bootstrap progress bar showing completed tasks vs pending tasks per milestone.
+
+### Phase 13: Project Progress Reports (Visual Grid)
+Clients need visual proof of progress. We will build a dedicated photo gallery generator.
+- **Database**:
+  - Create `project_progress_photos` table (project_id, photo_path, caption, uploaded_by, created_at).
+- **UI/Controllers**:
+  - Add a "Site Photos" tab to Project Details.
+  - Build a multi-image upload interface.
+  - **PDF Generator**: Create an endpoint that takes selected photos and generates a clean, printable PDF grid (e.g., 4 photos per page with captions) titled "Weekly Progress Report" to send to clients.
+
+### Phase 14: General Estimate Builder (Client Estimates)
+The [Estimates.php](file:///c:/wamp64/www/staging/app/Controllers/Estimates.php) controller and [EstimateModel](file:///c:/wamp64/www/staging/app/Models/EstimateModel.php#7-55) were accidentally refactored to handle `project_estimates` recently, completely overwriting the original client-facing General Estimates module. The user requires a standalone, general estimate builder with full PDF capabilities, cloning, and line-item management.
+- **Backend Refactoring**:
+  - Rename the current [EstimateModel](file:///c:/wamp64/www/staging/app/Models/EstimateModel.php#7-55) (which points to `project_estimates`) to `ProjectEstimateModel` to avoid conflicts.
+  - Rename the current [Estimates.php](file:///c:/wamp64/www/staging/app/Controllers/Estimates.php) controller to `ProjectEstimates.php` (saving the global dashboard we just built) and update its routes accordingly.
+- **Restore General Estimates**:
+  - Restore [EstimateModel.php](file:///c:/wamp64/www/staging/app/Models/EstimateModel.php) back to its original state (pointing to the [estimates](file:///c:/wamp64/www/staging/app/Controllers/Clients.php#82-90) table with `client_id`, `estimate_date`, `valid_until`).
+  - Restore the [Estimates.php](file:///c:/wamp64/www/staging/app/Controllers/Estimates.php) controller to manage client estimates.
+- **General Estimate Builder UI**:
+  - Re-establish [app/Views/estimates/index.php](file:///c:/wamp64/www/staging/app/Views/estimates/index.php) to show the master list of client estimates.
+  - Implement the detailed view ([app/Views/estimates/view.php](file:///c:/wamp64/www/staging/app/Views/estimates/view.php)) which includes the robust toolbar: "Download PDF", "View PDF", "Print", "Edit", "Clone", "Mark as Accepted", "Mark as Declined", and "Send to client".
+  - Implement an inline "Item Manager" on the detailed view to add items (Quantity, Rate, Total) to the estimate.
+  - Add "Sub Total" and "Total" calculation logic.
+
+### Phase 15: Dedicated Vendor & Subcontractor Portal
+Vendors need their own authenticated space, separate from the internal CRM staff view.
+- **Authentication & RBAC**:
+  - Ensure the `subcontractor_vendor` role is strictly sandboxed. When they log in, they do NOT see the full CRM dashboard.
+- **Vendor Dashboard View**:
+  - Create `app/Views/vendor_portal/dashboard.php`.
+  - **Bidding**: View available trade packages/estimate requests assigned to them and submit quotes directly.
+  - **Purchase Orders**: View and historically track POs issued to them (signed vs draft).
+  - **Invoicing**: A submit form for vendors to upload their own invoices against a specific PO, flagging it for internal PM approval.
+- **Vendor Onboarding**:
+  - Create a public registration/onboarding page `crm.com/vendor/apply` where subcontractors can submit their company details, W9s, and insurance certificates for internal review before being granted an active account.
+
+### Phase 16: Detailed System Documentation
+Create comprehensive User and Developer manuals.
+- **Developer Manual**: Document the DB schema, CodeIgniter routing structure, RBAC implementation, and how to create new modules.
+- **User Manual**: A role-based guide detailing workflows (e.g., "How a PM creates a Pay App", "How a Superintendent logs a Site Diary").
+- **Delivery**: These will be generated as polished PDF artifacts and linked within the CRM's "Help" or "Settings" menu.
+
+## Verification Plan
+We will tackle these phases sequentially, starting with Phase 12. Each feature will receive its own database migration (if needed), controller logic, and UI integration, followed by manual user verification before proceeding to the next phase.

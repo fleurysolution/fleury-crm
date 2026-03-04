@@ -36,6 +36,11 @@ class Auth extends BaseController
                 ->with('errors', $result['errors']);
         }
 
+        $roles = session()->get('user_roles') ?? [];
+        if (in_array('subcontractor_vendor', $roles) && count($roles) === 1) {
+            return redirect()->to(site_url('vendor-portal/dashboard'));
+        }
+
         return redirect()->to(site_url('dashboard'));
     }
 

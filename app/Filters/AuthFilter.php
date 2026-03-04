@@ -28,6 +28,16 @@ class AuthFilter implements FilterInterface
         if (! session()->get('is_logged_in')) {
             return redirect()->to(site_url('auth/signin'))->with('errors', ['Please sign in to access this page.']);
         }
+
+        // Redirect vendor users trying to access main CRM routes
+        $roles = session()->get('user_roles') ?? [];
+        if (in_array('subcontractor_vendor', $roles) && count($roles) === 1) {
+            // Allow them to hit the signout route. Allow vendor portal routes (which shouldn't use this filter ideally, but just in case)
+            $uri = $request->getUri()->getPath();
+            if (strpos($uri, 'vendor-portal') === false && strpos($uri, 'auth/signout') === false) {
+                return redirect()->to(site_url('vendor-portal/dashboard'));
+            }
+        }
     }
 
     /**

@@ -100,6 +100,10 @@
                class="sidebar-link <?= str_starts_with($uri, 'users') ? 'active' : '' ?>">
                 <i class="fa-solid fa-users"></i> Users
             </a>
+            <a href="<?= site_url('vendor-applications') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'vendor-applications') ? 'active' : '' ?>">
+                <i class="fa-solid fa-file-signature"></i> Vendor Apps
+            </a>
             <a href="<?= site_url('profile') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'profile') ? 'active' : '' ?>">
                 <i class="fa-solid fa-circle-user"></i> My Profile

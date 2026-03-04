@@ -1,0 +1,109 @@
+# Phase 8: Schedule of Values & Payment Applications
+
+## Database Changes
+- [x] Create `2026-03-XX_CreateSOVTables` migration for `project_sov_items`, `project_pay_apps`, and `project_pay_app_items`
+- [x] Run migration
+
+## Models
+- [x] Create [SovItemModel](file:///c:/wamp64/www/staging/app/Models/SovItemModel.php#7-38)
+- [x] Create [PayAppModel](file:///c:/wamp64/www/staging/app/Models/PayAppModel.php#7-41)
+- [x] Create [PayAppItemModel](file:///c:/wamp64/www/staging/app/Models/PayAppItemModel.php#7-21)
+
+## Controllers
+- [x] Implement [Finance](file:///c:/wamp64/www/staging/app/Controllers/Finance.php#10-216) controller
+  - [storeSovItem()](file:///c:/wamp64/www/staging/app/Controllers/Finance.php#12-30) 
+  - [createPayApp()](file:///c:/wamp64/www/staging/app/Controllers/Finance.php#45-68)
+  - [showPayApp()](file:///c:/wamp64/www/staging/app/Controllers/Finance.php#69-118)
+  - [savePayAppItems()](file:///c:/wamp64/www/staging/app/Controllers/Finance.php#119-161)
+
+## Views
+- [x] Update [app/Views/projects/tabs/finance_inline.php](file:///c:/wamp64/www/staging/app/Views/projects/tabs/finance_inline.php) (Master SOV and Pay App List)
+- [x] Create [app/Views/finance/pay_app_show.php](file:///c:/wamp64/www/staging/app/Views/finance/pay_app_show.php) (Fillable pay app line items view)
+- [x] Create [app/Views/finance/pay_app_pdf.php](file:///c:/wamp64/www/staging/app/Views/finance/pay_app_pdf.php) (Printable Invoice PDF)
+
+# Phase 9: Field Management (Punch Lists & Site Diaries)
+
+## Database Changes
+- [x] Create `2026-03-03-000004_CreateFieldManagementTables`
+- [x] Run migration
+
+## Models
+- [x] Create [PunchListModel](file:///c:/wamp64/www/staging/app/Models/PunchListModel.php#7-45)
+- [x] Create [SiteDiaryModel](file:///c:/wamp64/www/staging/app/Models/SiteDiaryModel.php#7-43)
+- [x] Create [SiteDiaryLaborModel](file:///c:/wamp64/www/staging/app/Models/SiteDiaryLaborModel.php#7-31)
+
+## Controllers
+- [x] Implement [FieldManagement](file:///c:/wamp64/www/staging/app/Controllers/FieldManagement.php#11-244) controller
+
+## Views
+- [x] Create [app/Views/projects/tabs/field_inline.php](file:///c:/wamp64/www/staging/app/Views/projects/tabs/field_inline.php)
+- [x] Create [app/Views/field/diary_show.php](file:///c:/wamp64/www/staging/app/Views/field/diary_show.php)
+
+# Phase 10: Procurement & Purchase Orders
+
+## Database Changes
+- [x] Create `2026-03-03-000005_CreateProcurementTables`
+- [x] Run migration
+
+## Models
+- [x] Create [PurchaseOrderModel](file:///c:/wamp64/www/staging/app/Models/PurchaseOrderModel.php#7-44)
+- [x] Create [PoItemModel](file:///c:/wamp64/www/staging/app/Models/PoItemModel.php#7-33)
+
+## Controllers
+- [/] Implement [Procurement](file:///c:/wamp64/www/staging/app/Controllers/Procurement.php#12-180) controller
+
+## Views
+- [x] Create [app/Views/projects/tabs/procurement_inline.php](file:///c:/wamp64/www/staging/app/Views/projects/tabs/procurement_inline.php)
+- [x] Create [app/Views/procurement/po_show.php](file:///c:/wamp64/www/staging/app/Views/procurement/po_show.php)
+- [x] Create [app/Views/procurement/po_pdf.php](file:///c:/wamp64/www/staging/app/Views/procurement/po_pdf.php)
+
+# Phase 11: AIA Payment Applications
+- [x] Rewrite [app/Views/finance/pay_app_pdf.php](file:///c:/wamp64/www/staging/app/Views/finance/pay_app_pdf.php) to match AIA G702 & G703
+- [x] Add explicit math headers to Controller/View for Lines 1-9
+- [x] Verify PDF outputs correctly on 2 pages
+
+# Phase 12: Advanced Task Management (Media)
+- [x] Database Migration: support for `task_attachments` or inline comment files
+- [x] Controller: add multi-part upload handling for Tasks
+- [x] View: add drag-and-drop UI to Task Modals
+
+# Phase 12.1: Asana-style Task Improvements & Bug Fixes
+- [x] Rich Text Editor: Integrate Summernote/Quill into [dashboard.php](file:///c:/wamp64/www/staging/app/Views/layouts/dashboard.php)
+- [x] Rich Text Editor: Apply to Task Description and Comments
+- [x] Multiple File Uploads: Modify `taskFile` input and `Tasks::upload` controller
+- [x] Bug Fix: Fix Checklist Toggle JavaScript endpoint in [show.php](file:///c:/wamp64/www/staging/app/Views/projects/show.php)
+- [x] Bug Fix: Fix Kanban drag & drop (`preventDefault` on dragenter)
+- [x] Task Editing: Allow updating task title, assignee, and dates directly from the modal
+
+# Phase 12.2: Extended Task Fields & Milestone Progress
+- [x] Database Migration: adding start/end dates, milestone, points, labels, recurring rules to `tasks`, creating `task_collaborators`
+- [x] Backend: Update [Tasks.php](file:///c:/wamp64/www/staging/app/Controllers/Tasks.php) store and update functions
+- [x] View: Update Task Creation modal with new fields
+- [x] View: Update Task Edit modal (inline edit) with new fields
+- [x] Feature: Add Progress Bar to [milestones_inline.php](file:///c:/wamp64/www/staging/app/Views/projects/tabs/milestones_inline.php)
+
+# Phase 13: Project Progress Reports
+- [x] Database Migration: `project_progress_photos`
+- [x] View: create 'Site Photos' grid gallery
+- [x] Controller: endpoint to handle photo uploads
+- [x] Controller: endpoint to generate PDF "Weekly Progress Report"
+
+# Phase 14: General Estimate Builder (Client Estimates)
+- [x] Backend: Rename [EstimateModel](file:///c:/wamp64/www/staging/app/Models/EstimateModel.php#7-40) to [ProjectEstimateModel](file:///c:/wamp64/www/staging/app/Models/ProjectEstimateModel.php#7-55)
+- [x] Backend: Rename [Estimates.php](file:///c:/wamp64/www/staging/app/Controllers/Estimates.php) (project logic) to [ProjectEstimates.php](file:///c:/wamp64/www/staging/app/Controllers/ProjectEstimates.php)
+- [x] Backend: Update `$routes` to point Project Estimates to the new controller
+- [x] Backend: Restore original [EstimateModel.php](file:///c:/wamp64/www/staging/app/Models/EstimateModel.php) (for clients)
+- [x] Backend: Restore original [Estimates.php](file:///c:/wamp64/www/staging/app/Controllers/Estimates.php) controller (for clients)
+- [x] View: Rebuild [app/Views/estimates/index.php](file:///c:/wamp64/www/staging/app/Views/estimates/index.php) for Client Estimates
+- [x] View: Rebuild [app/Views/estimates/create.php](file:///c:/wamp64/www/staging/app/Views/estimates/create.php) for Client Estimates
+- [x] View: Build [app/Views/estimates/view.php](file:///c:/wamp64/www/staging/app/Views/estimates/view.php) with toolbar (PDF, Clone, Send) and Item Manager
+
+# Phase 15: Dedicated Vendor Portal
+- [ ] View: create `vendor_portal/dashboard.php`
+- [ ] Logic: partition UI so Subcontractors only see assigned tasks/bids
+- [ ] View/Controller: Vendor Onboarding form for public registration
+
+# Phase 16: Detailed System Documentation
+- [ ] Draft Developer Manual (DB Schema, RBAC architecture, route design)
+- [ ] Draft User Workflow Manual
+- [ ] Generate PDFs and link in Help menu

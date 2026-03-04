@@ -13,6 +13,19 @@ $routes->get('auth/signin', 'Auth::signin');
 $routes->post('auth/signin', 'Auth::attemptSignin');
 $routes->post('auth/signout', 'Auth::signout');
 
+// Vendor Portal Routes
+$routes->group('vendor-portal', ['filter' => 'auth'], function ($routes) {
+    $routes->get('dashboard', 'VendorPortal::dashboard');
+    $routes->get('pos', 'VendorPortal::pos');
+    $routes->get('bids', 'VendorPortal::bids');
+    $routes->get('tasks', 'VendorPortal::tasks');
+});
+
+// Vendor Onboarding (Public)
+$routes->get('vendor/apply', 'VendorApply::index');
+$routes->post('vendor/apply', 'VendorApply::submit');
+$routes->get('vendor/apply/success', 'VendorApply::success');
+
 $routes->get('dashboard', 'Dashboard::index', ['filter' => 'auth']);
 
 $routes->get('auth/password/forgot', 'Auth::forgotPassword');
@@ -355,6 +368,12 @@ $routes->post('users/(:num)/update',          'Users::update/$1',       ['filter
 $routes->post('users/(:num)/password',        'Users::changePassword/$1', ['filter' => 'auth']);
 $routes->post('users/(:num)/toggle-status',   'Users::toggleStatus/$1', ['filter' => 'auth']);
 $routes->post('users/(:num)/delete',          'Users::delete/$1',       ['filter' => 'auth']);
+
+// ── Vendor Applications (Internal) ─────────────────────────────────────────
+$routes->get('vendor-applications',                 'VendorApplications::index',    ['filter' => 'auth']);
+$routes->get('vendor-applications/(:num)',          'VendorApplications::show/$1',  ['filter' => 'auth']);
+$routes->post('vendor-applications/(:num)/approve', 'VendorApplications::approve/$1',['filter' => 'auth']);
+$routes->post('vendor-applications/(:num)/reject',  'VendorApplications::reject/$1', ['filter' => 'auth']);
 
 // ── My Profile ──────────────────────────────────────────────────────────────
 $routes->get('profile',                       'Users::profile',         ['filter' => 'auth']);
