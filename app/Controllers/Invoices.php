@@ -28,8 +28,8 @@ class Invoices extends BaseController
         $data = [
             'title' => 'Invoices',
             'invoices' => $this->invoiceModel
-                ->select('project_invoices.*, clients.company_name')
-                ->join('clients', 'clients.id = project_invoices.project_id', 'left') // Fixed: project_invoices uses project_id, not client_id
+                ->select('invoices.*, clients.company_name')
+                ->join('clients', 'clients.id = invoices.client_id')
                 ->findAll()
         ];
         return view('invoices/index', $data);

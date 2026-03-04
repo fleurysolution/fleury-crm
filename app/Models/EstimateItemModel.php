@@ -6,28 +6,18 @@ use CodeIgniter\Model;
 
 class EstimateItemModel extends Model
 {
-    protected $table          = 'project_estimate_items';
+    protected $table          = 'estimate_items';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $useSoftDeletes = false; // standard relational table, items hard delete
+    protected $useSoftDeletes = false;
 
-    protected $allowedFields = [
+    protected $allowedFields  = [
         'estimate_id',
-        'cost_code',
+        'title',
         'description',
         'quantity',
-        'unit',
-        'unit_cost',
-        'total_cost'
+        'rate',
+        'total',
+        'sort'
     ];
-
-    /**
-     * Get all line items for a specific estimate.
-     */
-    public function forEstimate(int $estimateId): array
-    {
-        return $this->where('estimate_id', $estimateId)
-            ->orderBy('id', 'ASC')
-            ->findAll();
-    }
 }

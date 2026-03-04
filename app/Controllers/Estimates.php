@@ -2,122 +2,158 @@
 
 namespace App\Controllers;
 
+use App\Controllers\BaseController;
 use App\Models\EstimateModel;
 use App\Models\EstimateItemModel;
-use App\Models\ProjectModel;
+use App\Models\ClientModel;
+use App\Models\TaxModel;
 
-class Estimates extends BaseAppController
+class Estimates extends BaseController
 {
-    /**
-     * POST /projects/:id/estimates
-     * Creates a new empty master estimate.
-     */
-    public function store(int $projectId): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
-    {
-        $eModel = new EstimateModel();
-        
-        $estimateId = $eModel->insert([
-            'project_id'   => $projectId,
-            'title'        => $this->request->getPost('title'),
-            'status'       => 'Draft',
-            'total_amount' => 0.00,
-            'created_by'   => $this->currentUser['id'],
-        ]);
+    protected $estimateModel;
+    protected $estimateItemModel;
+    protected $clientModel;
+    protected $taxModel;
 
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true]);
-        }
-        return redirect()->to(site_url("estimates/{$estimateId}"))->with('success', 'Estimate created. Now add your items.');
+    public function __construct()
+    {
+        $this->estimateModel = new EstimateModel();
+        $this->estimateItemModel = new EstimateItemModel();
+        $this->clientModel = new ClientModel();
+        $this->taxModel = new TaxModel();
     }
 
-    /**
-     * GET /estimates/:id
-     * Detail view to build line items.
-     */
-    public function show(int $id): string
+    public function index()
     {
-        $eModel = new EstimateModel();
-        $estimate = $eModel->find($id);
-        if (!$estimate) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        $data = [
+            'title' => 'Estimates',
+            'estimates' => $this->estimateModel
+                ->select('estimates.*, clients.company_name')
+                ->join('clients', 'clients.id = estimates.client_id')
+                ->findAll()
+        ];
+        return view('estimates/index', $data);
+    }
 
-        $project = (new ProjectModel())->find($estimate['project_id']);
-        $items = (new EstimateItemModel())->forEstimate($id);
+    public function create()
+    {
+        return view('estimates/form', [
+            'title' => 'Create Estimate',
+            'clients' => $this->clientModel->where('status', 'active')->findAll(),
+            'taxes' => $this->taxModel->findAll()
+        ]);
+    }
 
-        return $this->render('estimates/show', [
-            'project'  => $project,
+    public function store()
+    {
+        $rules = [
+            'client_id' => 'required|numeric',
+            'estimate_date' => 'required|valid_date',
+            'valid_until' => 'required|valid_date',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        // Generate public key
+        $publicKey = bin2hex(random_bytes(16));
+
+        $estimateData = [
+            'client_id' => $this->request->getPost('client_id'),
+            'estimate_date' => $this->request->getPost('estimate_date'),
+            'valid_until' => $this->request->getPost('valid_until'),
+            'note' => $this->request->getPost('note'),
+            'status' => 'draft',
+            'currency' => 'USD', // Default for now
+            'currency_symbol' => '$',
+            'public_key' => $publicKey,
+            'created_by' => session()->get('user_id'),
+        ];
+
+        $estimateId = $this->estimateModel->insert($estimateData);
+
+        if ($estimateId) {
+            // Process Items
+            $items = $this->request->getPost('items');
+            if ($items && is_array($items)) {
+                foreach ($items as $item) {
+                     if (!empty($item['title'])) {
+                        $this->estimateItemModel->insert([
+                            'estimate_id' => $estimateId,
+                            'title' => $item['title'],
+                            'description' => $item['description'] ?? '',
+                            'quantity' => $item['quantity'] ?? 1,
+                            'rate' => $item['rate'] ?? 0,
+                            'total' => ($item['quantity'] ?? 1) * ($item['rate'] ?? 0)
+                        ]);
+                     }
+                }
+            }
+            return redirect()->to(site_url('estimates/' . $estimateId))->with('message', 'Estimate created successfully.');
+        }
+
+        return redirect()->back()->withInput()->with('error', 'Failed to create estimate.');
+    }
+
+    public function show($id)
+    {
+        $estimate = $this->estimateModel->find($id);
+        if (!$estimate) {
+            return redirect()->to(site_url('estimates'))->with('error', 'Estimate not found.');
+        }
+
+        $client = $this->clientModel->find($estimate['client_id']);
+        $items = $this->estimateItemModel->where('estimate_id', $id)->findAll();
+
+        return view('estimates/view', [
+            'title' => 'Estimate #' . $id,
             'estimate' => $estimate,
-            'items'    => $items,
+            'client' => $client,
+            'items' => $items
         ]);
     }
 
-    /**
-     * POST /estimates/:id/items
-     * Add a line item to the estimate.
-     */
-    public function addItem(int $id): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
+    public function convert_to_invoice($id)
     {
-        $eModel = new EstimateModel();
-        $estimate = $eModel->find($id);
-        if (!$estimate) return $this->response->setJSON(['success' => false, 'message' => 'Estimate not found.']);
-
-        $qty = (float)$this->request->getPost('quantity');
-        $cost = (float)$this->request->getPost('unit_cost');
-        $total = $qty * $cost;
-
-        (new EstimateItemModel())->insert([
-            'estimate_id' => $id,
-            'cost_code'   => $this->request->getPost('cost_code'),
-            'description' => $this->request->getPost('description'),
-            'quantity'    => $qty,
-            'unit'        => $this->request->getPost('unit'),
-            'unit_cost'   => $cost,
-            'total_cost'  => $total
-        ]);
-
-        // Update Master Total
-        $newAmount = $estimate['total_amount'] + $total;
-        $eModel->update($id, ['total_amount' => $newAmount]);
-
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true]);
+        $estimate = $this->estimateModel->find($id);
+        if (!$estimate) {
+            return redirect()->back()->with('error', 'Estimate not found.');
         }
-        return redirect()->back()->with('success', 'Item Added.');
-    }
 
-    /**
-     * POST /estimates/:id/items/:itemId/delete
-     */
-    public function deleteItem(int $id, int $itemId): \CodeIgniter\HTTP\RedirectResponse
-    {
-        $eModel = new EstimateModel();
-        $iModel = new EstimateItemModel();
+        $invoiceModel = new \App\Models\InvoiceModel();
+        $invoiceItemModel = new \App\Models\InvoiceItemModel();
 
-        $estimate = $eModel->find($id);
-        $item = $iModel->find($itemId);
+        // Create Invoice
+        $invoiceId = $invoiceModel->insert([
+            'client_id' => $estimate['client_id'],
+            'bill_date' => date('Y-m-d'),
+            'due_date' => date('Y-m-d', strtotime('+30 days')),
+            'status' => 'not_paid',
+            'note' => $estimate['note'],
+            'created_by' => session()->get('user_id')
+        ]);
 
-        if ($estimate && $item && $item['estimate_id'] == $id) {
-            $iModel->delete($itemId);
-            // Deduct from Master Total
-            $newAmount = max(0, $estimate['total_amount'] - $item['total_cost']);
-            $eModel->update($id, ['total_amount' => $newAmount]);
+        if ($invoiceId) {
+            // Copy Items
+            $items = $this->estimateItemModel->where('estimate_id', $id)->findAll();
+            foreach ($items as $item) {
+                $invoiceItemModel->insert([
+                    'invoice_id' => $invoiceId,
+                    'title' => $item['title'],
+                    'description' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'rate' => $item['rate'],
+                    'total' => $item['total']
+                ]);
+            }
             
-            return redirect()->back()->with('success', 'Item Deleted.');
-        }
-        return redirect()->back()->with('error', 'Item not found.');
-    }
+            // Update Estimate Status
+            $this->estimateModel->update($id, ['status' => 'accepted']);
 
-    /**
-     * POST /estimates/:id/delete
-     */
-    public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
-    {
-        $eModel = new EstimateModel();
-        $est    = $eModel->find($id);
-        if ($est) {
-            $eModel->delete($id);
-            return redirect()->to(site_url("projects/{$est['project_id']}?tab=estimates"))
-                ->with('success', 'Estimate deleted.');
+            return redirect()->to(site_url('invoices/' . $invoiceId))->with('message', 'Converted to Invoice successfully.');
         }
-        return redirect()->back()->with('error', 'Estimate not found.');
+
+        return redirect()->back()->with('error', 'Conversion failed.');
     }
 }
