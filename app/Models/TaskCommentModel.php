@@ -5,7 +5,7 @@ class TaskCommentModel extends Model {
     protected $primaryKey     = 'id';
     protected $useSoftDeletes = true;
     protected $useTimestamps  = true;
-    protected $allowedFields  = ['task_id','user_id','parent_id','body'];
+    protected $allowedFields  = ['task_id','user_id','parent_id','body','attachment_path','attachment_name'];
     public function forTask(int $taskId): array {
         return $this->select('task_comments.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS author_name')
             ->join('fs_users','fs_users.id = task_comments.user_id','left')

@@ -37,6 +37,7 @@ $priorityColors = ['low'=>'info','medium'=>'secondary','high'=>'warning','urgent
         <span class="badge bg-white text-<?= $color ?> ms-1"><?= count($cols[$status] ?? []) ?></span>
     </div>
     <div class="kanban-cards" id="col-<?= $status ?>"
+         ondragenter="event.preventDefault();"
          ondragover="event.preventDefault();this.classList.add('drag-over')"
          ondragleave="this.classList.remove('drag-over')"
          ondrop="onDrop(event,'<?= $status ?>')">

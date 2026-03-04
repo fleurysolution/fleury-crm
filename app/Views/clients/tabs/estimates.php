@@ -10,9 +10,9 @@
                 <tr>
                     <th>ID</th>
                     <th>Date</th>
-                    <th>Valid Until</th>
+                    <th>Title</th>
                     <th>Status</th>
-                    <th>Amount</th>
+                    <th>Total amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -22,10 +22,10 @@
                     <?php foreach ($estimates as $estimate): ?>
                     <tr>
                         <td class="fw-bold text-primary">#<?= esc($estimate['id']) ?></td>
-                        <td><?= esc($estimate['estimate_date']) ?></td>
-                        <td><?= esc($estimate['valid_until']) ?></td>
-                        <td><span class="badge bg-secondary"><?= esc($estimate['status']) ?></span></td>
-                        <td><?= number_format($estimate['discount_amount'], 2) // Note: Using discount_amount as placeholder per original view logic ?></td>
+                        <td><?= esc(date('Y-m-d', strtotime($estimate['created_at'] ?? 'now'))) ?></td>
+                        <td><?= esc($estimate['title'] ?? '') ?></td>
+                        <td><span class="badge bg-secondary"><?= esc($estimate['status'] ?? '') ?></span></td>
+                        <td><?= number_format($estimate['total_amount'] ?? 0, 2) ?></td>
                     </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

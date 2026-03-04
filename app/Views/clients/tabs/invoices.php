@@ -22,10 +22,10 @@
                     <?php foreach ($invoices as $invoice): ?>
                     <tr>
                         <td class="fw-bold text-primary">#<?= esc($invoice['id']) ?></td>
-                        <td><?= esc($invoice['bill_date']) ?></td>
-                        <td><?= esc($invoice['due_date']) ?></td>
-                        <td><span class="badge bg-secondary"><?= esc($invoice['status']) ?></span></td>
-                        <td><?= number_format($invoice['invoice_total'], 2) ?></td>
+                        <td><?= esc($invoice['invoice_date'] ?? '') ?></td>
+                        <td><?= esc($invoice['due_date'] ?? '') ?></td>
+                        <td><span class="badge bg-secondary"><?= esc($invoice['status'] ?? '') ?></span></td>
+                        <td><?= number_format($invoice['total_amount'] ?? 0, 2) ?></td>
                     </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

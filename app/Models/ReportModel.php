@@ -28,14 +28,14 @@ class ReportModel extends Model
                 SUM(CASE WHEN due_date < CURDATE() AND status!="done" THEN 1 ELSE 0 END) AS overdue
              FROM tasks WHERE project_id=? AND deleted_at IS NULL',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         // BOQ
         $boq = $db->query(
             'SELECT COALESCE(SUM(total_amount),0) AS budget, COALESCE(SUM(actual_amount),0) AS actual
              FROM boq_items WHERE project_id=? AND is_section=0 AND deleted_at IS NULL',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         // RFIs
         $rfis = $db->query(
@@ -46,7 +46,7 @@ class ReportModel extends Model
                 SUM(CASE WHEN status="closed" THEN 1 ELSE 0 END) AS closed
              FROM rfis WHERE project_id=? AND deleted_at IS NULL',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         // Punch list
         $punch = $db->query(
@@ -57,7 +57,7 @@ class ReportModel extends Model
                 SUM(CASE WHEN status="closed" THEN 1 ELSE 0 END) AS closed
              FROM punch_list_items WHERE project_id=? AND deleted_at IS NULL',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         // Milestones
         $milestones = $db->query(
@@ -65,13 +65,13 @@ class ReportModel extends Model
                 SUM(CASE WHEN status="completed" THEN 1 ELSE 0 END) AS done
              FROM project_milestones WHERE project_id=?',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         // Site diary entries past 30 days
         $diary = $db->query(
             'SELECT COUNT(*) AS cnt FROM site_diary_entries WHERE project_id=? AND entry_date >= DATE_SUB(CURDATE(),INTERVAL 30 DAY) AND deleted_at IS NULL',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         // Payment certs
         $certs = $db->query(
@@ -79,7 +79,7 @@ class ReportModel extends Model
                     COALESCE(SUM(net_amount),0) AS total
              FROM payment_certificates WHERE project_id=? AND deleted_at IS NULL',
             [$projectId]
-        )->getRow('array');
+        )->getRowArray();
 
         return [
             'tasks'      => $tasks,
@@ -118,7 +118,7 @@ class ReportModel extends Model
                 COALESCE(SUM(budget),0) AS total_budget
              FROM projects WHERE deleted_at IS NULL AND status NOT IN ("archived")',
             []
-        )->getRow('array');
+        )->getRowArray();
 
         $taskKpi = $db->query(
             'SELECT COUNT(*) AS total,
@@ -126,7 +126,7 @@ class ReportModel extends Model
                 SUM(CASE WHEN due_date < CURDATE() AND status!="done" THEN 1 ELSE 0 END) AS overdue
              FROM tasks WHERE deleted_at IS NULL',
             []
-        )->getRow('array');
+        )->getRowArray();
 
         return ['projects' => $projects, 'totals' => $totals, 'taskKpi' => $taskKpi];
     }

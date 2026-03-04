@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="<?= base_url('assets/vendor/fontawesome/all.min.css') ?>">
     <!-- Admin stylesheet -->
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
     <style>
         body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
@@ -204,6 +206,8 @@
 <script src="<?= base_url('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
 <!-- jQuery – local -->
 <script src="<?= base_url('assets/vendor/jquery/jquery.min.js') ?>"></script>
+<!-- Quill Rich Text Editor JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <script>
 function openSidebar() {

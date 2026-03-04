@@ -249,11 +249,13 @@ $routes->post('drawings/(:num)/revisions',      'Drawings::uploadRevision/$1',['
 $routes->post('drawings/(:num)/delete',         'Drawings::delete/$1',        ['filter' => 'auth']);
 
 // ── Estimates & Bids ──────────────────────────────────────────────────────────
-$routes->post('projects/(:num)/estimates',      'Estimates::store/$1',        ['filter' => 'auth']);
-$routes->get('estimates/(:num)',                'Estimates::show/$1',         ['filter' => 'auth']);
-$routes->post('estimates/(:num)/items',         'Estimates::addItem/$1',      ['filter' => 'auth']);
-$routes->post('estimates/(:num)/items/(:num)/delete', 'Estimates::deleteItem/$1/$2', ['filter' => 'auth']);
-$routes->post('estimates/(:num)/delete',        'Estimates::delete/$1',       ['filter' => 'auth']);
+$routes->get('project-estimates/new',                   'ProjectEstimates::create',   ['filter' => 'auth']);
+$routes->get('project-estimates',                       'ProjectEstimates::index',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/estimates',              'ProjectEstimates::store/$1', ['filter' => 'auth']);
+$routes->get('project-estimates/(:num)',                'ProjectEstimates::show/$1',  ['filter' => 'auth']);
+$routes->post('project-estimates/(:num)/items',         'ProjectEstimates::addItem/$1', ['filter' => 'auth']);
+$routes->post('project-estimates/(:num)/items/(:num)/delete', 'ProjectEstimates::deleteItem/$1/$2', ['filter' => 'auth']);
+$routes->post('project-estimates/(:num)/delete',        'ProjectEstimates::delete/$1', ['filter' => 'auth']);
 
 $routes->post('projects/(:num)/bids',           'Bids::store/$1',             ['filter' => 'auth']);
 $routes->post('bids/(:num)/status',             'Bids::updateStatus/$1',      ['filter' => 'auth']);
@@ -385,6 +387,11 @@ $routes->post('comments',                           'Comments::store',          
 $routes->post('comments/(:num)/delete',             'Comments::delete/$1',          ['filter' => 'auth']);
 $routes->post('comments/(:num)/update',             'Comments::update/$1',          ['filter' => 'auth']);
 
+// Phase 13: Project Progress Reports
+$routes->post('projects/(:num)/upload-photos',      'Projects::uploadProgressPhotos/$1', ['filter' => 'auth']);
+$routes->delete('projects/(:num)/delete-photo/(:num)', 'Projects::deleteProgressPhoto/$1/$2', ['filter' => 'auth']);
+$routes->get('projects/(:num)/progress-report',    'Projects::generateProgressReport/$1', ['filter' => 'auth']);
+
 $routes->group('leads', ['filter' => 'auth'], function ($routes) {
     $routes->get('/', 'Leads::index');
     $routes->get('kanban', 'Leads::kanban');
@@ -409,6 +416,14 @@ $routes->group('estimates', ['filter' => 'auth'], function ($routes) {
     $routes->get('(:num)', 'Estimates::show/$1');
     $routes->get('edit/(:num)', 'Estimates::edit/$1');
     $routes->get('convert/(:num)', 'Estimates::convert_to_invoice/$1');
+    
+    // Advanced builder features
+    $routes->post('(:num)/items', 'Estimates::addItem/$1');
+    $routes->post('(:num)/items/(:num)/delete', 'Estimates::deleteItem/$1/$2');
+    $routes->get('(:num)/clone', 'Estimates::clone/$1');
+    $routes->post('(:num)/status', 'Estimates::status/$1');
+    $routes->get('(:num)/send', 'Estimates::send/$1');
+    $routes->get('(:num)/pdf', 'Estimates::pdf/$1');
 });
 
 // Invoices Management

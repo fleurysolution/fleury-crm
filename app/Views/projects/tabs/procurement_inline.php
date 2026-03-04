@@ -2,8 +2,8 @@
 $poModel = new \App\Models\PurchaseOrderModel();
 $pos = $poModel->forProject($project['id']);
 $subcontractors = (new \App\Models\UserModel())->select('fs_users.*')
-    ->join('users_roles', 'users_roles.user_id = fs_users.id')
-    ->join('roles', 'roles.id = users_roles.role_id')
+    ->join('user_roles', 'user_roles.user_id = fs_users.id')
+    ->join('roles', 'roles.id = user_roles.role_id')
     ->where('roles.slug', 'subcontractor_vendor')
     ->findAll(); 
 ?>

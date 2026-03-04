@@ -1,7 +1,10 @@
 <?php
 // app/Views/projects/tabs/milestones_inline.php
 $msModel = new \App\Models\MilestoneModel();
+$taskModel = new \App\Models\TaskModel();
 $milestones = $msModel->forProject($project['id']);
+$allTasks = $taskModel->where('project_id', $project['id'])->findAll();
+
 $statusColors = ['pending'=>'warning','achieved'=>'success','missed'=>'danger'];
 ?>
 
@@ -23,6 +26,7 @@ $statusColors = ['pending'=>'warning','achieved'=>'success','missed'=>'danger'];
     <thead class="table-light">
         <tr>
             <th>Milestone</th>
+            <th>Progress</th>
             <th>Due Date</th>
             <th>Status</th>
             <th>Client Facing</th>
@@ -32,6 +36,12 @@ $statusColors = ['pending'=>'warning','achieved'=>'success','missed'=>'danger'];
     <tbody>
     <?php foreach ($milestones as $ms):
         $daysLeft = $ms['due_date'] ? (int)ceil((strtotime($ms['due_date'])-time())/86400) : null;
+        
+        // Calculate Progress
+        $msTasks = array_filter($allTasks, fn($t) => $t['milestone_id'] == $ms['id']);
+        $totalMsTasks = count($msTasks);
+        $completedMsTasks = count(array_filter($msTasks, fn($t) => $t['status'] === 'done'));
+        $progressPct = $totalMsTasks > 0 ? round(($completedMsTasks / $totalMsTasks) * 100) : 0;
     ?>
     <tr>
         <td>
@@ -39,6 +49,15 @@ $statusColors = ['pending'=>'warning','achieved'=>'success','missed'=>'danger'];
             <?php if ($ms['description']): ?>
             <div class="text-muted" style="font-size:.75rem;"><?= esc(substr($ms['description'],0,80)) ?></div>
             <?php endif; ?>
+        </td>
+        <td style="width: 15%;">
+            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:0.75rem;">
+                <span class="text-muted"><?= $completedMsTasks ?>/<?= $totalMsTasks ?> Tasks</span>
+                <span class="fw-semibold"><?= $progressPct ?>%</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-<?= $progressPct === 100 ? 'success' : 'primary' ?>" role="progressbar" style="width: <?= $progressPct ?>%;"></div>
+            </div>
         </td>
         <td>
             <?= $ms['due_date'] ? date('d M Y', strtotime($ms['due_date'])) : '—' ?>

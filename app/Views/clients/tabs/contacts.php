@@ -31,13 +31,13 @@
                             <td class="ps-4">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; font-weight: 600;">
-                                        <?= strtoupper(substr($contact['first_name'], 0, 1) . substr($contact['last_name'], 0, 1)) ?>
+                                        <?= strtoupper(substr($contact['name'] ?? '?', 0, 1)) ?>
                                     </div>
                                     <div>
                                         <a href="<?= site_url('clients/contact_profile/' . $contact['id']) ?>" class="text-dark fw-bold text-decoration-none">
-                                            <?= esc($contact['first_name'] . ' ' . $contact['last_name']) ?>
+                                            <?= esc($contact['name'] ?? 'Unknown') ?>
                                         </a>
-                                        <?php if ($contact['is_primary_contact']): ?>
+                                        <?php if (!empty($contact['is_primary'])): ?>
                                             <span class="badge bg-info-subtle text-info ms-2" style="font-size: 0.65rem;">Primary</span>
                                         <?php endif; ?>
                                     </div>

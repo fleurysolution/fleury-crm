@@ -72,13 +72,19 @@ class Clients extends BaseController
 
     public function invoices($id) {
         $model = new InvoiceModel();
-        $invoices = $model->where('client_id', $id)->findAll();
+        $invoices = $model->select('project_invoices.*, projects.title as project_name')
+                          ->join('projects', 'projects.id = project_invoices.project_id')
+                          ->where('projects.client_id', $id)
+                          ->findAll();
         return view('clients/tabs/invoices', ['invoices' => $invoices, 'client_id' => $id]);
     }
 
     public function estimates($id) {
         $model = new EstimateModel();
-        $estimates = $model->where('client_id', $id)->findAll();
+        $estimates = $model->select('project_estimates.*, projects.title as project_name')
+                           ->join('projects', 'projects.id = project_estimates.project_id')
+                           ->where('projects.client_id', $id)
+                           ->findAll();
         return view('clients/tabs/estimates', ['estimates' => $estimates, 'client_id' => $id]);
     }
     

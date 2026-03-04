@@ -74,6 +74,7 @@ $tabList = [
     'estimates'  => ['Estimates',  'fa-file-invoice'],
     'procurement'=> ['Procurement','fa-file-contract'],
     'field'      => ['Field App',  'fa-helmet-safety'],
+    'photos'     => ['Site Photos','fa-images'],
     'files'      => ['Files',      'fa-folder-open'],
     'contracts'  => ['Contracts',  'fa-file-contract'],
     'boq'        => ['BOQ',        'fa-clipboard-list'],
@@ -89,7 +90,7 @@ $tabList = [
 <ul class="nav nav-tabs mb-3 border-bottom" id="projectTabs">
     <?php
         if ($isExternal) {
-            $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'files'];
+            $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'photos', 'files'];
             foreach (array_keys($tabList) as $key) {
                 if (!in_array($key, $allowedExternalTabs)) {
                     unset($tabList[$key]);
@@ -120,6 +121,7 @@ $tabList = [
     case 'estimates':  include __DIR__ . '/tabs/estimates_inline.php'; break;
     case 'procurement':include __DIR__ . '/tabs/procurement_inline.php'; break;
     case 'field':      include __DIR__ . '/tabs/field_inline.php'; break;
+    case 'photos':     include __DIR__ . '/tabs/site_photos_inline.php'; break;
     case 'contracts':  include __DIR__ . '/tabs/contracts_inline.php'; break;
     case 'boq':        include __DIR__ . '/tabs/boq_inline.php'; break;
     case 'finance':    include __DIR__ . '/tabs/finance_inline.php'; break;
@@ -144,20 +146,11 @@ endswitch; ?>
     <div class="modal-body">
         <div class="row g-3">
             <div class="col-12">
-                <input type="text" id="newTaskTitle" class="form-control form-control-lg" placeholder="Task title…">
+                <input type="text" id="newTaskTitle" class="form-control form-control-lg fw-semibold" placeholder="Task Title (e.g., Pour Foundation)">
             </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold">Phase</label>
-                <select id="newTaskPhase" class="form-select">
-                    <option value="">None</option>
-                    <?php foreach ($phases as $ph): ?>
-                    <option value="<?= $ph['id'] ?>"><?= esc($ph['title']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold">Status</label>
-                <select id="newTaskStatus" class="form-select">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+                <select id="newTaskStatus" class="form-select form-select-sm">
                     <option value="todo">To Do</option>
                     <option value="in_progress">In Progress</option>
                     <option value="review">Review</option>
@@ -165,26 +158,96 @@ endswitch; ?>
                     <option value="blocked">Blocked</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold">Priority</label>
-                <select id="newTaskPriority" class="form-select">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Priority</label>
+                <select id="newTaskPriority" class="form-select form-select-sm">
                     <option value="low">Low</option>
                     <option value="medium" selected>Medium</option>
                     <option value="high">High</option>
                     <option value="urgent">Urgent</option>
                 </select>
             </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-semibold">Due Date</label>
-                <input type="date" id="newTaskDue" class="form-control">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Phase</label>
+                <select id="newTaskPhase" class="form-select form-select-sm">
+                    <option value="">None</option>
+                    <?php foreach ($phases as $ph): ?>
+                    <option value="<?= $ph['id'] ?>"><?= esc($ph['title']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-semibold">Est. Hours</label>
-                <input type="number" id="newTaskHours" class="form-control" placeholder="0" min="0" step="0.5">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Milestone</label>
+                <select id="newTaskMilestone" class="form-select form-select-sm">
+                    <option value="">None</option>
+                    <?php foreach ($milestones as $ms): ?>
+                    <option value="<?= $ms['id'] ?>"><?= esc($ms['title']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <div class="col-12">
-                <label class="form-label small fw-semibold">Description</label>
-                <textarea id="newTaskDesc" class="form-control" rows="3" placeholder="Optional description…"></textarea>
+
+            <!-- Row 3: Assignee & Collaborators -->
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-muted mb-1">Assignee</label>
+                <select id="newTaskAssignee" class="form-select form-select-sm">
+                    <option value="">Unassigned</option>
+                    <?php foreach ($members as $mem): ?>
+                    <option value="<?= $mem['user_id'] ?>"><?= esc($mem['name']) ?> (<?= esc($mem['role']) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-7">
+                <label class="form-label small fw-semibold text-muted mb-1">Collaborators (Hold Ctrl to select multiple)</label>
+                <select id="newTaskCollaborators" class="form-select form-select-sm" multiple size="2">
+                    <?php foreach ($members as $mem): ?>
+                    <option value="<?= $mem['user_id'] ?>"><?= esc($mem['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <!-- Row 4: Timeline -->
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Start Date</label>
+                <input type="date" id="newTaskStart" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Start Time</label>
+                <input type="time" id="newTaskStartTime" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Deadline Date</label>
+                <input type="date" id="newTaskDue" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Deadline Time</label>
+                <input type="time" id="newTaskEndTime" class="form-control form-control-sm">
+            </div>
+
+            <!-- Row 5: Metadata -->
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Recurring</label>
+                <select id="newTaskRecurring" class="form-select form-select-sm">
+                    <option value="">None</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Points</label>
+                <input type="number" id="newTaskPoints" class="form-control form-control-sm" placeholder="0" min="0">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Est. Hours</label>
+                <input type="number" id="newTaskHours" class="form-control form-control-sm" placeholder="0" min="0" step="0.5">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Labels (comma sep)</label>
+                <input type="text" id="newTaskLabels" class="form-control form-control-sm" placeholder="e.g. bug, ui">
+            </div>
+            <div class="col-12 mt-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Description</label>
+                <div id="newTaskDesc" style="height: 120px; background: #fff; border-radius: 0 0 4px 4px;"></div>
             </div>
         </div>
     </div>
@@ -218,7 +281,18 @@ const PROJECT_ID = <?= $project['id'] ?>;
 const CSRF_TOKEN = '<?= csrf_hash() ?>';
 const CSRF_NAME  = '<?= csrf_token() ?>';
 
+let quillNewTask, quillComment;
+
+document.addEventListener("DOMContentLoaded", () => {
+    quillNewTask = new Quill('#newTaskDesc', {
+        theme: 'snow',
+        placeholder: 'Optional description…',
+        modules: { toolbar: [['bold', 'italic', 'underline', 'strike'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
+    });
+});
+
 function openNewTaskModal() {
+    quillNewTask.setContents([]);
     new bootstrap.Modal(document.getElementById('newTaskModal')).show();
 }
 
@@ -232,9 +306,25 @@ function submitNewTask() {
     fd.append('phase_id',         document.getElementById('newTaskPhase').value);
     fd.append('status',           document.getElementById('newTaskStatus').value);
     fd.append('priority',         document.getElementById('newTaskPriority').value);
+    fd.append('milestone_id',     document.getElementById('newTaskMilestone').value);
+    fd.append('assigned_to',      document.getElementById('newTaskAssignee').value);
+    fd.append('start_date',       document.getElementById('newTaskStart').value);
+    fd.append('start_time',       document.getElementById('newTaskStartTime').value);
     fd.append('due_date',         document.getElementById('newTaskDue').value);
+    fd.append('end_time',         document.getElementById('newTaskEndTime').value);
+    fd.append('recurring_rule',   document.getElementById('newTaskRecurring').value);
+    fd.append('points',           document.getElementById('newTaskPoints').value);
+    fd.append('labels',           document.getElementById('newTaskLabels').value);
     fd.append('estimated_hours',  document.getElementById('newTaskHours').value);
-    fd.append('description',      document.getElementById('newTaskDesc').value);
+
+    const collabs = document.getElementById('newTaskCollaborators');
+    if (collabs) {
+        Array.from(collabs.selectedOptions).forEach(opt => {
+            fd.append('collaborators[]', opt.value);
+        });
+    }
+    const descHTML = quillNewTask.root.innerHTML;
+    fd.append('description', descHTML === '<p><br></p>' ? '' : descHTML);
 
     fetch(`/staging/public/projects/${PROJECT_ID}/tasks`, { method:'POST', body: fd })
         .then(r => r.json())
@@ -260,11 +350,16 @@ function renderTaskDetail(d) {
     const priorityColors = {low:'info',medium:'secondary',high:'warning',urgent:'danger'};
     const statusLabels   = {todo:'To Do',in_progress:'In Progress',review:'Review',done:'Done',blocked:'Blocked'};
 
-    document.getElementById('taskDetailTitle').textContent = t.title;
+    document.getElementById('taskDetailTitle').innerHTML = `
+        <div class="d-flex align-items-center gap-2">
+            <span id="display-title-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'title')">${escHtml(t.title)} <i class="fa-solid fa-pen fa-xs text-muted ms-1 opacity-50"></i></span>
+            <input type="text" id="input-title-${t.id}" class="form-control form-control-sm d-none" value="${escHtml(t.title)}" onblur="saveTaskField(${t.id}, 'title')" onkeydown="if(event.key==='Enter') saveTaskField(${t.id}, 'title')">
+        </div>
+    `;
 
     const chkHtml = (d.checklists||[]).map(c => `
         <div class="form-check mb-1" id="chk-${c.id}">
-            <input class="form-check-input" type="checkbox" ${c.is_done?'checked':''} onchange="toggleChecklist(${c.id})">
+            <input class="form-check-input" type="checkbox" ${c.is_done?'checked':''} onchange="toggleChecklist(${t.id}, ${c.id})">
             <label class="form-check-label ${c.is_done?'text-decoration-line-through text-muted':''}">${escHtml(c.item_text)}</label>
         </div>`).join('');
 
@@ -275,13 +370,18 @@ function renderTaskDetail(d) {
                 <div class="fw-semibold small">${escHtml(c.author_name||'Unknown')}</div>
                 <div class="small text-muted mb-1">${c.created_at||''}</div>
                 <div class="p-2 bg-light rounded small">${escHtml(c.body)}</div>
+                ${c.attachment_path ? 
+                    (c.attachment_path.match(/\.(jpg|jpeg|png|gif)$/i) ? 
+                        `<div class="mt-2"><img src="/staging/public/${c.attachment_path}" alt="attachment" style="max-width:100%;border-radius:5px;"></div>` : 
+                        `<div class="mt-2"><a href="/staging/public/${c.attachment_path}" target="_blank" class="small"><i class="fa-solid fa-paperclip"></i> ${escHtml(c.attachment_name)}</a></div>`
+                    ) : ''}
             </div>
         </div>`).join('') || '<p class="text-muted small">No comments yet.</p>';
 
     document.getElementById('taskDetailBody').innerHTML = `
     <div class="row g-0">
         <div class="col-lg-8 p-4 border-end">
-            <p class="text-muted">${escHtml(t.description||'No description.')}</p>
+            <div class="mb-4">${t.description||'<p class="text-muted">No description.</p>'}</div>
             <hr>
             <h6 class="fw-semibold mb-2">Checklist</h6>
             <div id="checklistItems">${chkHtml}</div>
@@ -290,11 +390,26 @@ function renderTaskDetail(d) {
                 <button class="btn btn-sm btn-outline-primary" onclick="addChecklistItem(${t.id})">Add</button>
             </div>
             <hr>
+            <h6 class="fw-semibold mb-2">Attachments</h6>
+            <div id="attachmentsArea" class="d-flex flex-wrap gap-2 mb-2">${(d.attachments||[]).map(a => `
+                <div class="border rounded p-2 text-center" style="width:100px;">
+                    ${a.filepath.match(/\.(jpg|jpeg|png|gif)$/i) ? `<img src="/staging/public/${a.filepath}" style="width:100%;height:60px;object-fit:cover;border-radius:4px;margin-bottom:5px;">` : `<i class="fa-solid fa-file fa-2x text-muted my-2"></i>`}
+                    <div class="small text-truncate" title="${escHtml(a.filename)}"><a href="/staging/public/${a.filepath}" target="_blank">${escHtml(a.filename)}</a></div>
+                </div>
+            `).join('')}</div>
+            <div class="input-group mt-2">
+                <input type="file" id="taskFile" class="form-control form-control-sm" multiple>
+                <button class="btn btn-sm btn-outline-primary" onclick="uploadTaskFile(${t.id})">Upload</button>
+            </div>
+            <hr>
             <h6 class="fw-semibold mb-2">Comments</h6>
             <div id="commentsArea">${commHtml}</div>
-            <div class="input-group mt-2">
-                <textarea id="newComment" class="form-control form-control-sm" rows="2" placeholder="Write a comment…"></textarea>
-                <button class="btn btn-sm btn-primary" onclick="submitComment(${t.id})">Post</button>
+            <div class="mt-3 border rounded">
+                <div id="newComment" style="height: 80px; border:none; border-bottom:1px solid #dee2e6;"></div>
+                <div class="p-2 bg-light d-flex align-items-center justify-content-between">
+                    <input type="file" id="commentFile" class="form-control form-control-sm border-0" style="max-width:200px; background:transparent;" title="Attach Image/File">
+                    <button class="btn btn-sm btn-primary" onclick="submitComment(${t.id})">Post Comment</button>
+                </div>
             </div>
         </div>
         <div class="col-lg-4 p-4">
@@ -304,13 +419,71 @@ function renderTaskDetail(d) {
                 <dt class="col-5 text-muted">Priority</dt>
                 <dd class="col-7"><span class="badge bg-${priorityColors[t.priority]||'secondary'}-subtle text-${priorityColors[t.priority]||'secondary'}">${t.priority}</span></dd>
                 <dt class="col-5 text-muted">Assignee</dt>
-                <dd class="col-7">${escHtml(t.assignee_name||'—')}</dd>
-                <dt class="col-5 text-muted">Due Date</dt>
-                <dd class="col-7">${t.due_date||'—'}</dd>
-                <dt class="col-5 text-muted">Est. Hours</dt>
-                <dd class="col-7">${t.estimated_hours||'—'}</dd>
-                <dt class="col-5 text-muted">Progress</dt>
-                <dd class="col-7">${t.percent_complete||0}%</dd>
+                <dd class="col-7">
+                    <span id="display-assigned_to-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'assigned_to')">${escHtml(t.assignee_name||'Unassigned')} <i class="fa-solid fa-pen fa-xs text-muted ms-1 opacity-50"></i></span>
+                    <select id="input-assigned_to-${t.id}" class="form-select form-select-sm d-none" onblur="saveTaskField(${t.id}, 'assigned_to')">
+                        <option value="">Unassigned</option>
+                        ${(d.users||[]).map(u => `<option value="${u.id}" ${u.id==t.assigned_to?'selected':''}>${escHtml(u.name)}</option>`).join('')}
+                    </select>
+                </dd>
+                
+                <dt class="col-5 text-muted mt-2">Start Date</dt>
+                <dd class="col-7 mt-2">
+                    <span id="display-start_date-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'start_date')">${t.start_date ? dateFormatted(t.start_date) : '—'}</span>
+                    <input type="date" id="input-start_date-${t.id}" class="form-control form-control-sm d-none" value="${t.start_date||''}" onblur="saveTaskField(${t.id}, 'start_date')">
+                </dd>
+                <dt class="col-5 text-muted">Start Time</dt>
+                <dd class="col-7">
+                    <span id="display-start_time-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'start_time')">${t.start_time || '—'}</span>
+                    <input type="time" id="input-start_time-${t.id}" class="form-control form-control-sm d-none" value="${t.start_time||''}" onblur="saveTaskField(${t.id}, 'start_time')">
+                </dd>
+                
+                <dt class="col-5 text-muted mt-2">Deadline Date</dt>
+                <dd class="col-7 mt-2">
+                    <span id="display-due_date-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'due_date')">${t.due_date ? dateFormatted(t.due_date) : '—'} <i class="fa-solid fa-pen fa-xs text-muted ms-1 opacity-50"></i></span>
+                    <input type="date" id="input-due_date-${t.id}" class="form-control form-control-sm d-none" value="${t.due_date||''}" onblur="saveTaskField(${t.id}, 'due_date')">
+                </dd>
+                <dt class="col-5 text-muted">Deadline Time</dt>
+                <dd class="col-7">
+                    <span id="display-end_time-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'end_time')">${t.end_time || '—'}</span>
+                    <input type="time" id="input-end_time-${t.id}" class="form-control form-control-sm d-none" value="${t.end_time||''}" onblur="saveTaskField(${t.id}, 'end_time')">
+                </dd>
+
+                <dt class="col-5 text-muted mt-2">Est. Hours</dt>
+                <dd class="col-7 mt-2">
+                    <span id="display-estimated_hours-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'estimated_hours')">${t.estimated_hours||'—'}</span>
+                    <input type="number" id="input-estimated_hours-${t.id}" class="form-control form-control-sm d-none" value="${t.estimated_hours||''}" onblur="saveTaskField(${t.id}, 'estimated_hours')">
+                </dd>
+                <dt class="col-5 text-muted">Points</dt>
+                <dd class="col-7">
+                    <span id="display-points-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'points')">${t.points||'0'}</span>
+                    <input type="number" id="input-points-${t.id}" class="form-control form-control-sm d-none" value="${t.points||'0'}" onblur="saveTaskField(${t.id}, 'points')">
+                </dd>
+                
+                <dt class="col-5 text-muted mt-2">Labels</dt>
+                <dd class="col-7 mt-2">
+                    <span id="display-labels-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'labels')">${escHtml(t.labels||'—')}</span>
+                    <input type="text" id="input-labels-${t.id}" class="form-control form-control-sm d-none" value="${escHtml(t.labels||'')}" onblur="saveTaskField(${t.id}, 'labels')" placeholder="tag, tag2">
+                </dd>
+                
+                <dt class="col-5 text-muted">Recurring</dt>
+                <dd class="col-7">
+                    <span id="display-recurring_rule-${t.id}" class="task-editable" onclick="editTaskField(${t.id}, 'recurring_rule')">${escHtml(t.recurring_rule||'None')}</span>
+                    <select id="input-recurring_rule-${t.id}" class="form-select form-select-sm d-none" onblur="saveTaskField(${t.id}, 'recurring_rule')">
+                        <option value="">None</option>
+                        <option value="daily" ${t.recurring_rule==='daily'?'selected':''}>Daily</option>
+                        <option value="weekly" ${t.recurring_rule==='weekly'?'selected':''}>Weekly</option>
+                        <option value="monthly" ${t.recurring_rule==='monthly'?'selected':''}>Monthly</option>
+                    </select>
+                </dd>
+
+                <dt class="col-5 text-muted mt-2">Progress</dt>
+                <dd class="col-7 mt-2">${t.percent_complete||0}%</dd>
+                
+                <dt class="col-12 text-muted mt-3 mb-1 border-top pt-2">Collaborators</dt>
+                <dd class="col-12" style="font-size:0.8rem;">
+                    ${(d.collaborators||[]).length > 0 ? (d.collaborators).map(c=>`<span class="badge bg-light text-dark border me-1">${escHtml(c.first_name)} ${escHtml(c.last_name)}</span>`).join('') : '<span class="text-muted">None</span>'}
+                </dd>
             </dl>
             <div class="mt-3">
                 <label class="form-label small fw-semibold">Update Status</label>
@@ -320,14 +493,22 @@ function renderTaskDetail(d) {
             </div>
         </div>
     </div>`;
+
+    setTimeout(() => {
+        quillComment = new Quill('#newComment', {
+            theme: 'snow',
+            placeholder: 'Write a comment…',
+            modules: { toolbar: [['bold', 'italic', 'underline', 'strike'], ['link'], [{ 'list': 'ordered'}, { 'list': 'bullet' }]] }
+        });
+    }, 50);
 }
 
-function toggleChecklist(itemId) {
+function toggleChecklist(taskId, itemId) {
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
     fd.append('item_id', itemId);
     fd.append('action', 'toggle');
-    fetch(`/staging/public/tasks/${itemId}/checklist`, { method:'POST', body: fd });
+    fetch(`/staging/public/tasks/${taskId}/checklist`, { method:'POST', body: fd });
 }
 
 function addChecklistItem(taskId) {
@@ -341,18 +522,21 @@ function addChecklistItem(taskId) {
         .then(r=>r.json()).then(d=>{
             if (d.success) {
                 document.getElementById('checklistItems').insertAdjacentHTML('beforeend',
-                    `<div class="form-check mb-1"><input class="form-check-input" type="checkbox" onchange="toggleChecklist(${d.item.id})"><label class="form-check-label">${escHtml(d.item.item_text)}</label></div>`);
+                    `<div class="form-check mb-1"><input class="form-check-input" type="checkbox" onchange="toggleChecklist(${taskId}, ${d.item.id})"><label class="form-check-label">${escHtml(d.item.item_text)}</label></div>`);
                 document.getElementById('newChkItem').value = '';
             }
         });
 }
 
 function submitComment(taskId) {
-    const body = document.getElementById('newComment').value.trim();
-    if (!body) return;
+    const bodyHTML = quillComment.root.innerHTML;
+    const body = bodyHTML === '<p><br></p>' ? '' : bodyHTML;
+    const fileInput = document.getElementById('commentFile');
+    if (!body && fileInput.files.length === 0) return;
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
     fd.append('body', body);
+    if (fileInput.files.length > 0) fd.append('attachment', fileInput.files[0]);
     fetch(`/staging/public/tasks/${taskId}/comment`, { method:'POST', body: fd })
         .then(r=>r.json()).then(d=>{
             if (d.success) {
@@ -363,9 +547,42 @@ function submitComment(taskId) {
                         <div class="flex-grow-1">
                             <div class="fw-semibold small">${escHtml(c.author_name||'Me')}</div>
                             <div class="p-2 bg-light rounded small mt-1">${escHtml(c.body)}</div>
+                            ${c.attachment_path ? 
+                                (c.attachment_path.match(/\.(jpg|jpeg|png|gif)$/i) ? 
+                                    `<div class="mt-2"><img src="/staging/public/${c.attachment_path}" alt="attachment" style="max-width:100%;border-radius:5px;"></div>` : 
+                                    `<div class="mt-2"><a href="/staging/public/${c.attachment_path}" target="_blank" class="small"><i class="fa-solid fa-paperclip"></i> ${escHtml(c.attachment_name)}</a></div>`
+                                ) : ''}
                         </div>
                      </div>`);
                 document.getElementById('newComment').value = '';
+                fileInput.value = '';
+            }
+        });
+}
+
+function uploadTaskFile(taskId) {
+    const fileInput = document.getElementById('taskFile');
+    if (fileInput.files.length === 0) return;
+    const fd = new FormData();
+    fd.append(CSRF_NAME, CSRF_TOKEN);
+    for (let i = 0; i < fileInput.files.length; i++) {
+        fd.append('files[]', fileInput.files[i]);
+    }
+    fetch(`/staging/public/tasks/${taskId}/upload`, { method:'POST', body: fd })
+        .then(r=>r.json()).then(d=>{
+            if (d.success && d.attachments) {
+                const area = document.getElementById('attachmentsArea');
+                d.attachments.forEach(a => {
+                    area.insertAdjacentHTML('beforeend',
+                        `<div class="border rounded p-2 text-center" style="width:100px;">
+                            ${a.filepath.match(/\.(jpg|jpeg|png|gif)$/i) ? `<img src="/staging/public/${a.filepath}" style="width:100%;height:60px;object-fit:cover;border-radius:4px;margin-bottom:5px;">` : `<i class="fa-solid fa-file fa-2x text-muted my-2"></i>`}
+                            <div class="small text-truncate" title="${escHtml(a.filename)}"><a href="/staging/public/${a.filepath}" target="_blank">${escHtml(a.filename)}</a></div>
+                        </div>`
+                    );
+                });
+                fileInput.value = '';
+            } else {
+                alert(d.message || "Failed to upload files.");
             }
         });
 }
@@ -378,8 +595,55 @@ function updateTaskStatus(taskId, status) {
 }
 
 function escHtml(s) {
+    if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+function dateFormatted(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString();
+}
+
+function editTaskField(taskId, field) {
+    document.getElementById(`display-${field}-${taskId}`).classList.add('d-none');
+    const input = document.getElementById(`input-${field}-${taskId}`);
+    input.classList.remove('d-none');
+    input.focus();
+}
+
+function saveTaskField(taskId, field) {
+    const input = document.getElementById(`input-${field}-${taskId}`);
+    const display = document.getElementById(`display-${field}-${taskId}`);
+    const val = input.value.trim();
+    
+    // Optimistic UI Update
+    input.classList.add('d-none');
+    display.classList.remove('d-none');
+    
+    if (field === 'title') { display.innerHTML = `${escHtml(val)} <i class="fa-solid fa-pen fa-xs text-muted ms-1 opacity-50"></i>`; }
+    else if (field === 'assigned_to') { display.innerHTML = `${escHtml(input.options[input.selectedIndex].text)} <i class="fa-solid fa-pen fa-xs text-muted ms-1 opacity-50"></i>`; }
+    else if (field === 'due_date' || field === 'start_date') { display.innerHTML = `${val ? dateFormatted(val) : '—'} <i class="fa-solid fa-pen fa-xs text-muted ms-1 opacity-50"></i>`; }
+    else if (field === 'recurring_rule') {
+        const textObj = {daily:'Daily', weekly:'Weekly', monthly:'Monthly'};
+        display.innerHTML = `${textObj[val] || 'None'}`;
+    }
+    else { display.innerHTML = `${escHtml(val) || '—'}`; }
+
+    const fd = new FormData();
+    fd.append(CSRF_NAME, CSRF_TOKEN);
+    fd.append(field, val);
+    
+    fetch(`/staging/public/tasks/${taskId}/update`, { method:'POST', body: fd })
+        .then(r=>r.json()).then(d=>{
+            if(!d.success) alert('Failed to update task.');
+        });
+}
 </script>
+
+<style>
+.task-editable { cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; }
+.task-editable:hover { background: rgba(0,0,0,0.05); }
+</style>
 
 <?= $this->endSection() ?>

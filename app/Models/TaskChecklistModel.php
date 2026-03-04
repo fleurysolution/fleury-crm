@@ -4,6 +4,7 @@ class TaskChecklistModel extends Model {
     protected $table         = 'task_checklists';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
+    protected $updatedField  = '';
     protected $allowedFields = ['task_id','item_text','is_done','done_by','done_at','sort_order'];
     public function forTask(int $taskId): array {
         return $this->where('task_id', $taskId)->orderBy('sort_order')->findAll();

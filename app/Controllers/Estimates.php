@@ -156,4 +156,80 @@ class Estimates extends BaseController
 
         return redirect()->back()->with('error', 'Conversion failed.');
     }
+
+    public function clone($id)
+    {
+        $original = $this->estimateModel->find($id);
+        if (!$original) return redirect()->back()->with('error', 'Estimate not found.');
+
+        // Copy parent
+        $cloneData = $original;
+        unset($cloneData['id']);
+        $cloneData['status'] = 'draft';
+        $cloneData['estimate_date'] = date('Y-m-d');
+        $cloneData['valid_until'] = date('Y-m-d', strtotime('+30 days'));
+        $cloneData['public_key'] = bin2hex(random_bytes(16));
+        $cloneId = $this->estimateModel->insert($cloneData);
+
+        // Copy items
+        $items = $this->estimateItemModel->where('estimate_id', $id)->findAll();
+        foreach($items as $item) {
+            $this->estimateItemModel->insert([
+                'estimate_id' => $cloneId,
+                'title' => $item['title'],
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'rate' => $item['rate'],
+                'total' => $item['total']
+            ]);
+        }
+
+        return redirect()->to(site_url('estimates/' . $cloneId))->with('success', 'Estimate cloned successfully.');
+    }
+
+    public function status($id)
+    {
+        $status = $this->request->getPost('status');
+        if (in_array($status, ['draft', 'sent', 'accepted', 'declined'])) {
+            $this->estimateModel->update($id, ['status' => $status]);
+            return redirect()->back()->with('success', 'Status updated to ' . ucfirst($status) . '.');
+        }
+        return redirect()->back()->with('error', 'Invalid status.');
+    }
+
+    public function send($id)
+    {
+        $estimate = $this->estimateModel->find($id);
+        if (!$estimate) return redirect()->back()->with('error', 'Estimate not found.');
+
+        // Dummy send logic for now
+        $this->estimateModel->update($id, ['status' => 'sent']);
+        return redirect()->back()->with('success', 'Estimate sent to client successfully.');
+    }
+
+    /**
+     * GET /estimates/:id/pdf
+     * View or Download a print-ready version of the estimate.
+     */
+    public function pdf($id)
+    {
+        $estimate = $this->estimateModel->find($id);
+        if (!$estimate) {
+            return redirect()->to(site_url('estimates'))->with('error', 'Estimate not found.');
+        }
+
+        $client = $this->clientModel->find($estimate['client_id']);
+        $items  = $this->estimateItemModel->where('estimate_id', $id)->findAll();
+
+        $data = [
+            'title'    => 'Estimate #' . $id,
+            'estimate' => $estimate,
+            'client'   => $client,
+            'items'    => $items,
+            'isPdf'    => true
+        ];
+
+        // Just use a clean HTML print view.
+        return view('estimates/print', $data);
+    }
 }

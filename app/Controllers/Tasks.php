@@ -13,9 +13,9 @@ use App\Models\UserModel;
 class Tasks extends BaseAppController
 {
     protected TaskModel           $tasks;
-    protected TaskCommentModel    $comments;
     protected TaskAttachmentModel $attachments;
     protected TaskChecklistModel  $checklists;
+    protected \App\Models\TaskCollaboratorModel $collaborators;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request,
                                    \CodeIgniter\HTTP\ResponseInterface $response,
@@ -26,6 +26,7 @@ class Tasks extends BaseAppController
         $this->comments    = new TaskCommentModel();
         $this->attachments = new TaskAttachmentModel();
         $this->checklists  = new TaskChecklistModel();
+        $this->collaborators = new \App\Models\TaskCollaboratorModel();
     }
 
     // ── LIST VIEW ────────────────────────────────────────────────────────
@@ -73,22 +74,35 @@ class Tasks extends BaseAppController
         $data = [
             'project_id'  => $projectId,
             'phase_id'    => $this->request->getPost('phase_id') ?: null,
-            'title'       => $this->request->getPost('title'),
+            'milestone_id'=> $this->request->getPost('milestone_id') ?: null,
+            'title'       => trim($this->request->getPost('title')),
             'description' => $this->request->getPost('description') ?: null,
             'assigned_to' => $this->request->getPost('assigned_to') ?: null,
             'status'      => $this->request->getPost('status') ?? 'todo',
             'priority'    => $this->request->getPost('priority') ?? 'medium',
             'start_date'  => $this->request->getPost('start_date') ?: null,
+            'start_time'  => $this->request->getPost('start_time') ?: null,
             'due_date'    => $this->request->getPost('due_date') ?: null,
+            'end_time'    => $this->request->getPost('end_time') ?: null,
             'estimated_hours' => $this->request->getPost('estimated_hours') ?: null,
+            'points'      => (int)$this->request->getPost('points'),
+            'labels'      => $this->request->getPost('labels') ?: null,
+            'recurring_rule' => $this->request->getPost('recurring_rule') ?: null,
             'created_by'  => session()->get('user_id'),
         ];
 
-        if (!trim($data['title'])) {
+        if (empty($data['title'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Title is required.']);
         }
 
-        $id   = $this->tasks->insert($data);
+        $id = $this->tasks->insert($data);
+
+        // Sync Collaborators
+        $collabs = $this->request->getPost('collaborators');
+        if (is_array($collabs)) {
+            $this->collaborators->syncCollaborators($id, $collabs);
+        }
+
         $task = $this->tasks->withAssignee()->where('tasks.id', $id)->first();
         return $this->response->setJSON(['success' => true, 'task' => $task]);
     }
@@ -96,37 +110,53 @@ class Tasks extends BaseAppController
     // ── SHOW (AJAX detail panel) ────────────────────────────────────────
     public function show(int $id)
     {
-        $task        = $this->tasks->withAssignee()->where('tasks.id', $id)->first();
+        $task = $this->tasks->withAssignee()->where('tasks.id', $id)->first();
         if (!$task) return $this->response->setJSON(['success' => false]);
-        $comments    = $this->comments->forTask($id);
-        $attachments = $this->attachments->forTask($id);
-        $checklists  = $this->checklists->forTask($id);
-        $users       = model(UserModel::class)->select('id, CONCAT(first_name, " ", last_name) AS name')->findAll();
+        
+        $comments     = $this->comments->forTask($id);
+        $attachments  = $this->attachments->forTask($id);
+        $checklists   = $this->checklists->forTask($id);
+        $taskCollabs  = $this->collaborators->getCollaborators($id);
+        
+        $users = model(UserModel::class)->select('id, CONCAT(first_name, " ", last_name) AS name, email')->findAll();
 
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
-                'success'     => true,
-                'task'        => $task,
-                'comments'    => $comments,
-                'attachments' => $attachments,
-                'checklists'  => $checklists,
+                'success'       => true,
+                'task'          => $task,
+                'comments'      => $comments,
+                'attachments'   => $attachments,
+                'checklists'    => $checklists,
+                'collaborators' => $taskCollabs,
             ]);
         }
-        return view('projects/partials/task_modal', compact('task','comments','attachments','checklists','users'));
+        // If falling back to full view:
+        return view('projects/partials/task_modal', compact('task','comments','attachments','checklists','taskCollabs','users'));
     }
 
     // ── UPDATE (AJAX) ────────────────────────────────────────────────────
     public function update(int $id)
     {
         $allowed = ['title','description','assigned_to','status','priority',
-                    'start_date','due_date','estimated_hours','percent_complete',
-                    'phase_id','milestone_id','area_id','cost_code_id'];
+                    'start_date','start_time','due_date','end_time','estimated_hours','percent_complete',
+                    'phase_id','milestone_id','area_id','cost_code_id', 'points', 'labels', 'recurring_rule'];
         $data = [];
         foreach ($allowed as $f) {
             $v = $this->request->getPost($f);
             if ($v !== null) { $data[$f] = $v === '' ? null : $v; }
         }
-        $this->tasks->update($id, $data);
+        if (!empty($data)) {
+            $this->tasks->update($id, $data);
+        }
+
+        // Sync Collaborators
+        $collabs = $this->request->getPost('collaborators');
+        if ($collabs !== null) {
+            // Can be empty array to clear all
+            $colArr = is_array($collabs) ? $collabs : [];
+            $this->collaborators->syncCollaborators($id, $colArr);
+        }
+
         $task = $this->tasks->withAssignee()->where('tasks.id', $id)->first();
         return $this->response->setJSON(['success' => true, 'task' => $task]);
     }
@@ -146,16 +176,28 @@ class Tasks extends BaseAppController
         return $this->response->setJSON(['success' => true]);
     }
 
-    // ── COMMENT ──────────────────────────────────────────────────────────
     public function comment(int $taskId)
     {
         $body = trim($this->request->getPost('body') ?? '');
-        if (!$body) return $this->response->setJSON(['success' => false]);
-        $id  = $this->comments->insert([
+        if (!$body && !$this->request->getFile('attachment')) return $this->response->setJSON(['success' => false]);
+        
+        $data = [
             'task_id' => $taskId,
             'user_id' => session()->get('user_id'),
             'body'    => $body,
-        ]);
+        ];
+
+        $file = $this->request->getFile('attachment');
+        if ($file && $file->isValid()) {
+            $dir = FCPATH . 'uploads/tasks/' . $taskId . '/comments/';
+            if (!is_dir($dir)) mkdir($dir, 0755, true);
+            $name = $file->getRandomName();
+            $file->move($dir, $name);
+            $data['attachment_name'] = $file->getClientName();
+            $data['attachment_path'] = 'uploads/tasks/' . $taskId . '/comments/' . $name;
+        }
+
+        $id  = $this->comments->insert($data);
         $c = $this->comments->select('task_comments.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS author_name')
             ->join('fs_users','fs_users.id = task_comments.user_id','left')
             ->find($id);
@@ -165,23 +207,39 @@ class Tasks extends BaseAppController
     // ── UPLOAD ───────────────────────────────────────────────────────────
     public function upload(int $taskId)
     {
-        $file = $this->request->getFile('file');
-        if (!$file || !$file->isValid()) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Invalid file.']);
+        $files = $this->request->getFiles();
+        if (!$files || empty($files['files'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No files uploaded.']);
         }
-        $dir  = WRITEPATH . 'uploads/tasks/' . $taskId . '/';
+
+        $dir  = FCPATH . 'uploads/tasks/' . $taskId . '/';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
-        $name = $file->getRandomName();
-        $file->move($dir, $name);
-        $id = $this->attachments->insert([
-            'task_id'   => $taskId,
-            'user_id'   => session()->get('user_id'),
-            'filename'  => $file->getClientName(),
-            'filepath'  => 'uploads/tasks/' . $taskId . '/' . $name,
-            'filesize'  => $file->getSize(),
-            'mime_type' => $file->getMimeType(),
-        ]);
-        return $this->response->setJSON(['success' => true, 'attachment' => $this->attachments->find($id)]);
+
+        $attachments = [];
+        $uploadFiles = is_array($files['files']) ? $files['files'] : [$files['files']];
+        
+        foreach ($uploadFiles as $file) {
+            if ($file->isValid() && !$file->hasMoved()) {
+                $name = $file->getRandomName();
+                $file->move($dir, $name);
+                
+                $id = $this->attachments->insert([
+                    'task_id'   => $taskId,
+                    'user_id'   => session()->get('user_id'),
+                    'filename'  => $file->getClientName(),
+                    'filepath'  => 'uploads/tasks/' . $taskId . '/' . $name,
+                    'filesize'  => $file->getSize(),
+                    'mime_type' => $file->getMimeType(),
+                ]);
+                $attachments[] = $this->attachments->find($id);
+            }
+        }
+
+        if (empty($attachments)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to process files.']);
+        }
+        
+        return $this->response->setJSON(['success' => true, 'attachments' => $attachments]);
     }
 
     // ── CHECKLIST TOGGLE ────────────────────────────────────────────────

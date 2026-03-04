@@ -91,7 +91,7 @@ class Users extends BaseAppController
              FROM fs_users u 
              WHERE u.id=? AND u.deleted_at IS NULL',
             [$id]
-        )->getRow('array');
+        )->getRowArray();
 
         if (!$user) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
@@ -191,7 +191,7 @@ class Users extends BaseAppController
         $user = $db->table('fs_users')
             ->select('*, CONCAT(first_name, " ", last_name) AS name')
             ->where('id', $this->currentUser['id'])
-            ->get()->getRow('array');
+            ->get()->getRowArray();
 
         return $this->render('users/profile', ['user' => $user]);
     }
@@ -225,7 +225,7 @@ class Users extends BaseAppController
         $db->table('fs_users')->where('id', $uid)->update($data);
 
         // Refresh session user data
-        $updated = $db->table('fs_users')->where('id', $uid)->get()->getRow('array');
+        $updated = $db->table('fs_users')->where('id', $uid)->get()->getRowArray();
         session()->set('user', $updated);
         session()->set('user_name', trim(($updated['first_name'] ?? '') . ' ' . ($updated['last_name'] ?? '')));
 

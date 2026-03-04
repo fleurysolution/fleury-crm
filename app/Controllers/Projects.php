@@ -18,6 +18,10 @@ class Projects extends BaseAppController
     protected MilestoneModel     $milestones;
     protected ProjectMemberModel $members;
     protected TaskModel          $tasks;
+    protected \App\Models\RfiModel           $rfi;
+    protected \App\Models\SubmittalModel     $submittals;
+    protected \App\Models\DrawingModel       $drawings;
+    protected \App\Models\ProjectProgressPhotoModel $photos;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request,
                                    \CodeIgniter\HTTP\ResponseInterface $response,
@@ -29,6 +33,10 @@ class Projects extends BaseAppController
         $this->milestones = new MilestoneModel();
         $this->members    = new ProjectMemberModel();
         $this->tasks      = new TaskModel();
+        $this->rfi        = new \App\Models\RfiModel(); // Added
+        $this->submittals = new \App\Models\SubmittalModel(); // Added
+        $this->drawings   = new \App\Models\DrawingModel(); // Added
+        $this->photos     = new \App\Models\ProjectProgressPhotoModel(); // Added
     }
 
     // ── LIST ─────────────────────────────────────────────────────────────
@@ -117,6 +125,10 @@ class Projects extends BaseAppController
         $phases   = $this->phases->forProject($id);
         $members  = $this->members->getMembers($id);
         $milestones = $this->milestones->forProject($id);
+        $rfi        = $this->rfi->where('project_id', $id)->findAll(); // Added
+        $submittals = $this->submittals->where('project_id', $id)->findAll(); // Added
+        $drawings   = $this->drawings->where('project_id', $id)->findAll(); // Added
+        $photos     = $this->photos->where('project_id', $id)->orderBy('created_at', 'DESC')->findAll(); // Added
 
         return $this->render('projects/show', [
             'title'      => $project['title'],
@@ -126,6 +138,10 @@ class Projects extends BaseAppController
             'phases'     => $phases,
             'members'    => $members,
             'milestones' => $milestones,
+            'rfi'        => $rfi, // Added
+            'submittals' => $submittals, // Added
+            'drawings'   => $drawings, // Added
+            'photos'     => $photos, // Added
         ]);
     }
 
@@ -224,4 +240,87 @@ class Projects extends BaseAppController
         return $this->response->setJSON(['success' => true]);
     }
 
+    // ── PROGRESS PHOTOS (AJAX) ───────────────────────────────────────────
+    public function uploadProgressPhotos(int $projectId)
+    {
+        $files = $this->request->getFiles();
+        if (!$files || empty($files['photos'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No files uploaded.']);
+        }
+
+        $dir = FCPATH . "uploads/projects/{$projectId}/progress/";
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+
+        $uploaded = [];
+        $uploadFiles = is_array($files['photos']) ? $files['photos'] : [$files['photos']];
+
+        foreach ($uploadFiles as $file) {
+            if ($file->isValid() && !$file->hasMoved()) {
+                $name = $file->getRandomName();
+                $file->move($dir, $name);
+
+                $id = $this->photos->insert([
+                    'project_id'  => $projectId,
+                    'photo_path'  => "uploads/projects/{$projectId}/progress/{$name}",
+                    'caption'     => $file->getClientName(),
+                    'uploaded_by' => session()->get('user_id')
+                ]);
+                $uploaded[] = $this->photos->find($id);
+            }
+        }
+
+        if (empty($uploaded)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to process files.']);
+        }
+
+        return $this->response->setJSON(['success' => true, 'photos' => $uploaded]);
+    }
+
+    public function deleteProgressPhoto(int $projectId, int $photoId)
+    {
+        $photo = $this->photos->find($photoId);
+        if ($photo && $photo['project_id'] == $projectId) {
+            if (file_exists(FCPATH . $photo['photo_path'])) {
+                unlink(FCPATH . $photo['photo_path']);
+            }
+            $this->photos->delete($photoId);
+            return $this->response->setJSON(['success' => true]);
+        }
+        return $this->response->setJSON(['success' => false, 'message' => 'Photo not found.']);
+    }
+
+    // ── PDF GENERATOR ────────────────────────────────────────────────────
+    public function generateProgressReport(int $projectId)
+    {
+        $project = $this->projects->find($projectId);
+        if (!$project) {
+            return redirect()->back()->with('error', 'Project not found.');
+        }
+
+        $photos = $this->photos->where('project_id', $projectId)->orderBy('created_at', 'DESC')->findAll();
+
+        if (empty($photos)) {
+            return redirect()->back()->with('error', 'No photos available to generate a report.');
+        }
+
+        $data = [
+            'project' => $project,
+            'photos'  => $photos,
+            'date'    => date('F j, Y'),
+        ];
+
+        $html = view('projects/progress_report_pdf', $data);
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $filename = "Progress_Report_" . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $project['title']) . "_" . date('Ymd') . ".pdf";
+        $dompdf->stream($filename, ["Attachment" => false]);
+    }
 }

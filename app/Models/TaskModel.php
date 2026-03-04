@@ -14,7 +14,8 @@ class TaskModel extends Model
         'project_id', 'phase_id', 'parent_task_id', 'milestone_id',
         'area_id', 'cost_code_id', 'title', 'description',
         'assigned_to', 'status', 'priority',
-        'start_date', 'due_date', 'estimated_hours', 'actual_hours',
+        'start_date', 'start_time', 'due_date', 'end_time', 
+        'estimated_hours', 'actual_hours', 'points', 'labels', 'recurring_rule',
         'percent_complete', 'sort_order', 'created_by',
     ];
 
