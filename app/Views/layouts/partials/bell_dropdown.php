@@ -88,7 +88,7 @@ document.querySelectorAll('.bell-item').forEach(el => {
             method:'POST',
             headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
             body: JSON.stringify({[CSRF_NAME]:CSRF_HASH})
-        });
+        }).catch(err => console.warn('Mark read failed:', err));
         // Visual: remove unread dot
         const dot = this.querySelector('.bg-primary.rounded-circle');
         if (dot) dot.remove();
@@ -108,22 +108,29 @@ document.getElementById('bellReadAll')?.addEventListener('click', function(e) {
         if (badge) badge.style.display = 'none';
         document.querySelectorAll('.bell-item .bg-primary.rounded-circle').forEach(d => d.remove());
         document.querySelectorAll('#bellList li.bg-light').forEach(li => li.classList.remove('bg-light'));
-    });
+    }).catch(err => console.warn('Mark all read failed:', err));
 });
 
 // Poll unread count every 30s
 function pollBell() {
     fetch('<?= site_url('notifications/count') ?>', {headers:{'X-Requested-With':'XMLHttpRequest'}})
-    .then(r => r.json()).then(d => {
+    .then(r => {
+        if (!r.ok) throw new Error('Network response was not ok');
+        return r.json();
+    })
+    .then(d => {
         const badge = document.getElementById('bellBadge');
         if (!badge) return;
-        if (d.count > 0) {
-            badge.textContent = d.count > 9 ? '9+' : d.count;
-            badge.style.display = '';
-        } else {
-            badge.style.display = 'none';
+        if (d && d.count !== undefined) {
+            if (d.count > 0) {
+                badge.textContent = d.count > 9 ? '9+' : d.count;
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
         }
-    });
+    })
+    .catch(err => console.warn('Notification poll failed:', err));
 }
 setInterval(pollBell, 30000);
 })();

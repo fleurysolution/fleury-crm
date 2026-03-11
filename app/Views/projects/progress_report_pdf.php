@@ -66,40 +66,45 @@
     </table>
 </div>
 
-<table class="photo-grid">
     <?php
-    $count = 0;
-    foreach ($photos as $photo):
-        if ($count % 2 == 0) echo "<tr>";
+    $chunks = array_chunk($photos, 10);
+    foreach ($chunks as $photoChunk):
     ?>
-    <td class="photo-cell">
-        <div class="photo-wrapper">
-            <?php 
-            $absPath = str_replace('\\', '/', FCPATH . $photo['photo_path']);
-            if (file_exists(FCPATH . $photo['photo_path'])): 
-            ?>
-                <img src="file:///<?= $absPath ?>" alt="Progress Photo">
-            <?php else: ?>
-                <div style="height: 200px; line-height: 200px; color: #999; border: 1px dashed #ccc; background: #f9f9f9;">Image Missing</div>
-            <?php endif; ?>
-            <div class="photo-info">
-                <div class="photo-caption"><?= esc($photo['title'] ?: $photo['caption']) ?></div>
-                <?php if($photo['description']): ?>
-                    <div style="margin-bottom: 4px; line-height: 1.4;"><?= nl2br(esc($photo['description'])) ?></div>
+    <table class="photo-grid" style="page-break-inside: auto;">
+        <?php
+        $count = 0;
+        foreach ($photoChunk as $photo):
+            if ($count % 2 == 0) echo "<tr>";
+        ?>
+        <td class="photo-cell">
+            <div class="photo-wrapper" style="page-break-inside: avoid;">
+                <?php 
+                $absPath = str_replace('\\', '/', FCPATH . $photo['photo_path']);
+                if (file_exists(FCPATH . $photo['photo_path'])): 
+                ?>
+                    <img src="file:///<?= $absPath ?>" alt="Progress Photo">
+                <?php else: ?>
+                    <div style="height: 200px; line-height: 200px; color: #999; border: 1px dashed #ccc; background: #f9f9f9;">Image Missing</div>
                 <?php endif; ?>
-                <span style="color: #999;">Logged: <?= date('M j, Y g:i A', strtotime($photo['created_at'])) ?></span>
+                <div class="photo-info">
+                    <div class="photo-caption"><?= esc($photo['title'] ?: $photo['caption']) ?></div>
+                    <?php if($photo['description']): ?>
+                        <div style="margin-bottom: 4px; line-height: 1.4;"><?= nl2br(esc($photo['description'])) ?></div>
+                    <?php endif; ?>
+                    <span style="color: #999;">Logged: <?= date('M j, Y g:i A', strtotime($photo['created_at'])) ?></span>
+                </div>
             </div>
-        </div>
-    </td>
-    <?php
-        $count++;
-        if ($count % 2 == 0) echo "</tr>";
-    endforeach;
-    
-    // Close row if odd number of photos
-    if ($count % 2 != 0) echo "<td class='photo-cell'></td></tr>";
-    ?>
-</table>
+        </td>
+        <?php
+            $count++;
+            if ($count % 2 == 0) echo "</tr>";
+        endforeach;
+        
+        // Close row if odd number of photos in chunk
+        if ($count % 2 != 0) echo "<td class='photo-cell'></td></tr>";
+        ?>
+    </table>
+    <?php endforeach; ?>
 
 <div class="footer">
     Site Progress Photo Report &middot; <?= esc($project['title']) ?> &middot; System Generated Content

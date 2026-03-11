@@ -426,6 +426,9 @@ class Projects extends BaseAppController
     // ── PDF GENERATOR ────────────────────────────────────────────────────
     public function generateProgressReport(int $projectId)
     {
+        // Close session early to avoid locking other requests during slow PDF generation
+        session_write_close();
+
         $start = $this->request->getGet('start_date');
         $end   = $this->request->getGet('end_date');
 
@@ -485,6 +488,7 @@ class Projects extends BaseAppController
 
     public function distributeReport(int $projectId)
     {
+        session_write_close();
         $recipients = $this->request->getPost('recipients') ?: [];
         $customEmails = $this->request->getPost('custom_emails');
         $message = $this->request->getPost('message');
@@ -520,12 +524,17 @@ class Projects extends BaseAppController
             'appSettings' => $this->appSettings
         ]);
 
+        $tempDir = WRITEPATH . 'temp';
+        if (!is_dir($tempDir)) mkdir($tempDir, 0755, true);
+
         $options = new \Dompdf\Options();
         $options->set('isRemoteEnabled', true);
         $options->set('chroot', FCPATH);
         $options->set('enable_font_subsetting', false);
+        $options->set('tempDir', $tempDir);
 
         $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->setBasePath(FCPATH);
         $dompdf->loadHtml($html);
         $dompdf->render();
         $pdfOutput = $dompdf->output();
