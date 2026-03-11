@@ -29,12 +29,21 @@
 <div class="header">
     <table width="100%">
         <tr>
-            <td width="60%">
+            <td width="50%">
+                <?php if (!empty($appSettings['company_logo'])): 
+                    $logoPath = str_replace('\\', '/', FCPATH . $appSettings['company_logo']);
+                ?>
+                    <img src="file:///<?= $logoPath ?>" style="max-height: 60px; margin-bottom: 10px;">
+                <?php endif; ?>
                 <h1>Weekly Progress Report</h1>
                 <p>Generated on <?= $date ?></p>
             </td>
-            <td width="40%" style="text-align: right;">
+            <td width="50%" style="text-align: right; vertical-align: top;">
                 <h2 style="margin:0; color:#333;"><?= esc($project['title']) ?></h2>
+                <div style="font-size: 11px; color: #666; margin-top: 5px;">
+                    Client: <?= esc($project['client_name']) ?><br>
+                    PM: <?= esc($project['pm_name']) ?>
+                </div>
             </td>
         </tr>
     </table>
@@ -66,15 +75,18 @@
     <td class="photo-cell">
         <div class="photo-wrapper">
             <?php 
-            $absPath = FCPATH . $photo['photo_path']; 
-            if (file_exists($absPath)): 
+            $absPath = str_replace('\\', '/', FCPATH . $photo['photo_path']);
+            if (file_exists(FCPATH . $photo['photo_path'])): 
             ?>
-                <img src="<?= $absPath ?>" alt="Progress Photo">
+                <img src="file:///<?= $absPath ?>" alt="Progress Photo">
             <?php else: ?>
                 <div style="height: 200px; line-height: 200px; color: #999; border: 1px dashed #ccc; background: #f9f9f9;">Image Missing</div>
             <?php endif; ?>
             <div class="photo-info">
-                <div class="photo-caption"><?= esc($photo['caption']) ?></div>
+                <div class="photo-caption"><?= esc($photo['title'] ?: $photo['caption']) ?></div>
+                <?php if($photo['description']): ?>
+                    <div style="margin-bottom: 4px; line-height: 1.4;"><?= nl2br(esc($photo['description'])) ?></div>
+                <?php endif; ?>
                 <span style="color: #999;">Logged: <?= date('M j, Y g:i A', strtotime($photo['created_at'])) ?></span>
             </div>
         </div>

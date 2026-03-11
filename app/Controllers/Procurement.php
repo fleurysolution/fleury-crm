@@ -19,11 +19,17 @@ class Procurement extends BaseAppController
     {
         $poModel = new PurchaseOrderModel();
 
+        // 0. Inherit isolation from project
+        $project = (new ProjectModel())->find($projectId);
+        if (!$project) return redirect()->back()->with('error', 'Project not found.');
+
         // 1. Generate next PO Number (e.g. PO-001)
         $count = $poModel->where('project_id', $projectId)->countAllResults();
         $nextNo = 'PO-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
 
         $poId = $poModel->insert([
+            'tenant_id'     => $project['tenant_id'],
+            'branch_id'     => $project['branch_id'],
             'project_id'    => $projectId,
             'vendor_id'     => $this->request->getPost('vendor_id') ?: null,
             'po_number'     => $nextNo,
@@ -122,7 +128,22 @@ class Procurement extends BaseAppController
         ];
 
         $action = $this->request->getPost('status_action');
-        if ($action === 'send') {
+        if ($action === 'submit_approval') {
+            $updateData['status'] = 'Pending Approval';
+            $poModel->update($id, $updateData);
+
+            $workflow = new \App\Services\WorkflowEngine();
+            $reqId = $workflow->submitRequest('purchase_orders', 'purchase_order', $id, $this->currentUser['id'], [], session('branch_id'), $totalAmount);
+
+            if (!$reqId) {
+                // If no workflow is configured, auto-approve
+                $poModel->update($id, ['status' => 'approved']);
+                return redirect()->to(site_url("projects/{$po['project_id']}?tab=procurement"))->with('success', "Purchase Order automatically approved (no workflow required).");
+            }
+            
+            return redirect()->to(site_url("projects/{$po['project_id']}?tab=procurement"))->with('success', "Purchase Order submitted for approval.");
+            
+        } elseif ($action === 'send') {
             $updateData['status'] = 'Sent';
         } elseif ($action === 'execute') {
             $updateData['status'] = 'Executed';

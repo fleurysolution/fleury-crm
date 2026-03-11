@@ -6,6 +6,7 @@ use App\Models\ProjectModel;
 use App\Models\SovItemModel;
 use App\Models\PayAppModel;
 use App\Models\PayAppItemModel;
+use App\Models\ProjectExpenseModel;
 
 class Finance extends BaseAppController
 {
@@ -153,7 +154,24 @@ class Finance extends BaseAppController
         $statusAction = $this->request->getPost('status_action');
         if ($statusAction === 'submit') {
             $pModel->update($id, ['status' => 'Submitted']);
-            return redirect()->to(site_url("projects/{$payApp['project_id']}?tab=finance"))->with('success', 'Payment Application Submitted.');
+            
+            // Trigger Workflow
+            $workflow = new \App\Services\WorkflowEngine();
+            // Calculate total for amount-based routing? PayAppItems total
+            $totalVal = 0;
+            $items = $piModel->where('pay_app_id', $id)->findAll();
+            // Logic to calculate total amount from items (work_completed * planned_value etc)
+            // For now, use a sum of work_completed_this_period
+            foreach($items as $i) $totalVal += $i['work_completed_this_period'];
+
+            $reqId = $workflow->submitRequest('pay_apps', 'pay_app', $id, $this->currentUser['id'], [], session('branch_id'), (float)$totalVal);
+            
+            if (!$reqId) {
+                $pModel->update($id, ['status' => 'Approved']);
+                return redirect()->to(site_url("projects/{$payApp['project_id']}?tab=finance"))->with('success', 'Payment Application automatically approved.');
+            }
+
+            return redirect()->to(site_url("projects/{$payApp['project_id']}?tab=finance"))->with('success', 'Payment Application Submitted for approval.');
         }
 
         return redirect()->back()->with('success', 'Progress saved successfully.');
@@ -211,5 +229,62 @@ class Finance extends BaseAppController
         
         $dompdf->stream($filename, ["Attachment" => true]);
         exit;
+    }
+
+    /**
+     * POST /finance/expenses/:projectId
+     */
+    public function storeExpense(int $projectId): \CodeIgniter\HTTP\RedirectResponse
+    {
+        $eModel = new ProjectExpenseModel();
+        
+        $data = [
+            'project_id'  => $projectId,
+            'tenant_id'   => session('tenant_id'),
+            'branch_id'   => session('branch_id'),
+            'category'    => $this->request->getPost('category'),
+            'description' => $this->request->getPost('description'),
+            'amount'      => (float)$this->request->getPost('amount'),
+            'currency'    => $this->request->getPost('currency') ?? 'USD',
+            'expense_date'=> $this->request->getPost('expense_date') ?? date('Y-m-d'),
+            'vendor'      => $this->request->getPost('vendor'),
+            'status'      => 'submitted',
+            'submitted_by'=> $this->currentUser['id']
+        ];
+
+        // Handle File Upload for receipt
+        $file = $this->request->getFile('receipt');
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $newName = $file->getRandomName();
+            $file->move('uploads/expenses', $newName);
+            $data['receipt_path'] = 'uploads/expenses/' . $newName;
+        }
+
+        $expenseId = $eModel->insert($data);
+
+        // Trigger Workflow
+        $workflow = new \App\Services\WorkflowEngine();
+        $reqId = $workflow->submitRequest('expenses', 'project_expense', $expenseId, $this->currentUser['id'], [], session('branch_id'), $data['amount']);
+        
+        if (!$reqId) {
+            $eModel->update($expenseId, ['status' => 'approved', 'approved_at' => date('Y-m-d H:i:s')]);
+            return redirect()->back()->with('success', 'Expense created and automatically approved.');
+        }
+
+        return redirect()->back()->with('success', 'Expense submitted for approval.');
+    }
+
+    /**
+     * POST /finance/expenses/:id/delete
+     */
+    public function deleteExpense(int $id): \CodeIgniter\HTTP\RedirectResponse
+    {
+        $eModel = new ProjectExpenseModel();
+        $expense = $eModel->find($id);
+        if ($expense) {
+            $eModel->delete($id);
+            return redirect()->back()->with('success', 'Expense deleted.');
+        }
+        return redirect()->back()->with('error', 'Expense not found.');
     }
 }

@@ -2,16 +2,14 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class PunchListItemModel extends Model
+class PunchListItemModel extends ErpModel
 {
     protected $table          = 'punch_list_items';
     protected $primaryKey     = 'id';
     protected $useTimestamps  = true;
     protected $useSoftDeletes = true;
     protected $allowedFields  = [
-        'project_id','area_id','task_id','item_number','title','description',
+        'project_id','tenant_id','branch_id','area_id','task_id','item_number','title','description',
         'trade','status','priority','reported_by','assigned_to','due_date',
         'resolved_at','closed_at',
     ];

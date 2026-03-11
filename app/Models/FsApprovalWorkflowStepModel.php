@@ -4,7 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class FsAsApprovalWorkflowStepModel extends Model
+class FsApprovalWorkflowStepModel extends Model
 {
     protected $table         = 'fs_as_approval_workflow_steps';
     protected $primaryKey    = 'id';
@@ -19,6 +19,8 @@ class FsAsApprovalWorkflowStepModel extends Model
         'min_approvals',
         'is_mandatory',
         'sla_hours',
+        'escalation_role_id',
+        'escalation_user_id',
         'created_at',
     ];
 

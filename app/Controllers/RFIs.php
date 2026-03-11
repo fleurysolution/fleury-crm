@@ -2,166 +2,132 @@
 
 namespace App\Controllers;
 
-use App\Models\RFIModel;
+use App\Models\RfiModel;
 use App\Models\RFIResponseModel;
 use App\Models\ProjectModel;
-use App\Models\AreaModel;
 
 class RFIs extends BaseAppController
 {
-    /**
-     * GET /projects/:id/rfis — list all RFIs for a project
-     */
-    public function index(int $projectId): string
-    {
-        $project = (new ProjectModel())->find($projectId);
-        if (!$project) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+    protected RfiModel $rfiModel;
+    protected RfiReplyModel $replyModel;
+    protected ProjectModel $projectModel;
 
-        $rfiModel = new RFIModel();
-        $rfis     = $rfiModel->forProject($projectId);
-        $counts   = $rfiModel->statusCounts($projectId);
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request,
+                                   \CodeIgniter\HTTP\ResponseInterface $response,
+                                   \Psr\Log\LoggerInterface $logger): void
+    {
+        parent::initController($request, $response, $logger);
+        $this->rfiModel     = new RfiModel();
+        $this->replyModel   = new RFIResponseModel();
+        $this->projectModel = new ProjectModel();
+    }
+
+    public function index(int $projectId)
+    {
+        $rfis = $this->rfiModel->where('project_id', $projectId)->orderBy('created_at', 'DESC')->findAll();
+        
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['status' => 'success', 'data' => $rfis]);
+        }
 
         return $this->render('rfis/index', [
-            'project' => $project,
-            'rfis'    => $rfis,
-            'counts'  => $counts,
+            'title' => 'Project RFIs',
+            'rfis'  => $rfis,
+            'projectId' => $projectId
         ]);
     }
 
-    /**
-     * GET /rfis/:id — RFI detail page
-     */
-    public function show(int $id): string
+    public function globalIndex()
     {
-        $rfiModel  = new RFIModel();
-        $rfi       = $rfiModel->find($id);
-        if (!$rfi) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-
-        $project   = (new ProjectModel())->find($rfi['project_id']);
-        $responses = (new RFIResponseModel())->forRFI($id);
-        $areas     = (new AreaModel())->where('project_id', $rfi['project_id'])->findAll();
-
-        return $this->render('rfis/show', [
-            'project'   => $project,
-            'rfi'       => $rfi,
-            'responses' => $responses,
-            'areas'     => $areas,
+        $rfis = $this->rfiModel->orderBy('created_at', 'DESC')->findAll();
+        
+        return $this->render('rfis/index', [
+            'title' => 'RFIs',
+            'rfis'  => $rfis
         ]);
     }
 
-    /**
-     * POST /projects/:id/rfis — create new RFI
-     */
-    public function store(int $projectId): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
+    public function store(int $projectId)
     {
-        $rfiModel = new RFIModel();
-        $data     = [
-            'project_id'   => $projectId,
-            'rfi_number'   => $rfiModel->nextNumber($projectId),
-            'title'        => $this->request->getPost('title'),
-            'description'  => $this->request->getPost('description'),
-            'discipline'   => $this->request->getPost('discipline'),
-            'priority'     => $this->request->getPost('priority') ?: 'medium',
-            'status'       => 'submitted',
-            'submitted_by' => $this->currentUser['id'],
-            'assigned_to'  => $this->request->getPost('assigned_to') ?: null,
-            'area_id'      => $this->request->getPost('area_id')     ?: null,
-            'due_date'     => $this->request->getPost('due_date')    ?: null,
+        $rfiNumber = $this->request->getPost('rfi_number');
+        $title     = $this->request->getPost('title');
+
+        if (empty($rfiNumber) || empty($title)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'RFI Number and Title are required.'])->setStatusCode(400);
+        }
+
+        $project = $this->projectModel->find($projectId);
+
+        $data = [
+            'tenant_id'         => $project['tenant_id'],
+            'branch_id'         => $project['branch_id'],
+            'project_id'        => $projectId,
+            'rfi_number'        => $this->request->getPost('rfi_number'),
+            'title'             => $this->request->getPost('title'),
+            'description'       => $this->request->getPost('description'),
+            'proposed_solution' => $this->request->getPost('proposed_solution'),
+            'discipline'        => $this->request->getPost('discipline'),
+            'priority'          => $this->request->getPost('priority'),
+            'status'            => 'open',
+            'due_date'          => $this->request->getPost('due_date'),
+            'area_id'           => $this->request->getPost('area_id') ?: null,
+            'assigned_to'       => $this->request->getPost('assigned_to'),
+            'created_by'        => session('user_id'),
         ];
 
-        $id = $rfiModel->insert($data);
-
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true, 'id' => $id, 'rfi_number' => $data['rfi_number']]);
-        }
-        return redirect()->to(site_url("rfis/{$id}"))->with('success', 'RFI ' . $data['rfi_number'] . ' submitted.');
-    }
-
-    /**
-     * POST /rfis/:id/respond — add response/reply
-     */
-    public function respond(int $id): \CodeIgniter\HTTP\Response
-    {
         try {
-            $rfiModel = new RFIModel();
-            $rfi      = $rfiModel->find($id);
-            if (!$rfi) return $this->response->setJSON(['success' => false, 'error' => 'RFI not found']);
-
-            $respModel = new RFIResponseModel();
-            $respId    = $respModel->insert([
-                'rfi_id'     => $id,
-                'user_id'    => $this->currentUser['id'] ?? 1,
-                'body'       => $this->request->getPost('body'),
-                'is_official'=> $this->request->getPost('is_official') ? 1 : 0,
-            ]);
-
-            if (!$respId) {
-                return $this->response->setJSON(['success' => false, 'error' => 'Validation failed: ' . json_encode($respModel->errors())]);
-            }
-
-            // If official response, mark RFI as answered
-            if ($this->request->getPost('is_official') && $rfi['status'] !== 'closed') {
-                $rfiModel->update($id, ['status' => 'answered', 'answered_at' => date('Y-m-d H:i:s')]);
-            }
-
-            $resp = $respModel->select('rfi_responses.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS author_name')
-                ->join('fs_users','fs_users.id = rfi_responses.user_id','left')
-                ->find($respId);
-
-            return $this->response->setJSON(['success' => true, 'response' => $resp]);
-        } catch (\Throwable $e) {
-            log_message('error', '[RFIs::respond] ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            $id = $this->rfiModel->insert($data);
+            session()->setFlashdata('message', 'RFI created successfully.');
+            return $this->response->setJSON(['success' => true, 'id' => $id]);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()])->setStatusCode(400);
         }
     }
 
-    /**
-     * POST /rfis/:id/status — quick status update
-     */
-    public function updateStatus(int $id): \CodeIgniter\HTTP\Response
+    public function show(int $rfiId)
     {
-        $rfiModel = new RFIModel();
-        $status   = $this->request->getPost('status');
-        $allowed  = ['draft','submitted','under_review','answered','closed'];
-        if (!in_array($status, $allowed)) {
-            return $this->response->setJSON(['success' => false, 'error' => 'Invalid status']);
+        $rfi = $this->rfiModel
+                    ->select('fs_rfis.*, 
+                             CONCAT(u1.first_name, " ", u1.last_name) AS submitter_name,
+                             CONCAT(u2.first_name, " ", u2.last_name) AS assignee_name')
+                    ->join('fs_users u1', 'u1.id = fs_rfis.created_by', 'left')
+                    ->join('fs_users u2', 'u2.id = fs_rfis.assigned_to', 'left')
+                    ->find($rfiId);
+
+        if (!$rfi) {
+            return $this->response->setStatusCode(404);
         }
-        $rfiModel->update($id, ['status' => $status]);
-        return $this->response->setJSON(['success' => true]);
+
+        $project = $this->projectModel->find($rfi['project_id']);
+        $replies = $this->replyModel->select('fs_rfi_replies.*, CONCAT(u.first_name, " ", u.last_name) AS author_name')
+                        ->join('fs_users u', 'u.id = fs_rfi_replies.user_id', 'left')
+                        ->where('rfi_id', $rfiId)
+                        ->orderBy('created_at', 'ASC')
+                        ->findAll();
+        
+        return $this->render('rfis/show', [
+            'title'     => 'RFI ' . $rfi['rfi_number'],
+            'rfi'       => $rfi,
+            'project'   => $project,
+            'responses' => $replies
+        ]);
     }
 
-    /**
-     * POST /rfis/:id/delete — soft delete
-     */
-    public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
+    public function respond(int $rfiId)
     {
-        $rfiModel = new RFIModel();
-        $rfi      = $rfiModel->find($id);
-        $rfiModel->delete($id);
-        return redirect()->to(site_url("projects/{$rfi['project_id']}?tab=rfis"))
-            ->with('success', 'RFI deleted.');
-    }
-
-    /**
-     * GET /rfis/:id/export — basic CSV export of RFI + responses
-     */
-    public function export(int $id): void
-    {
-        $rfi       = (new RFIModel())->find($id);
-        $responses = (new RFIResponseModel())->forRFI($id);
-
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="' . $rfi['rfi_number'] . '.csv"');
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['Field','Value']);
-        foreach (['rfi_number','title','description','discipline','status','priority','due_date','cost_impact','schedule_impact'] as $k) {
-            fputcsv($out, [$k, $rfi[$k] ?? '']);
+        // First, check if user can access this RFI via ErpModel scope
+        $rfi = $this->rfiModel->find($rfiId);
+        if (!$rfi) {
+            return $this->response->setStatusCode(404);
         }
-        fputcsv($out, ['---','RESPONSES']);
-        foreach ($responses as $r) {
-            fputcsv($out, [$r['author_name'] ?? '', $r['body'], $r['is_official'] ? 'Official' : '']);
-        }
-        fclose($out);
-        exit;
+
+        $id = $this->replyModel->insert([
+            'rfi_id' => $rfiId,
+            'user_id' => session('user_id'),
+            'body' => $this->request->getPost('body'),
+            'is_official' => $this->request->getPost('is_official') ? 1 : 0
+        ]);
+
+        return $this->response->setJSON(['success' => true, 'reply_id' => $id]);
     }
 }

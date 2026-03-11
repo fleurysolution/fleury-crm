@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class PurchaseOrderModel extends Model
+class PurchaseOrderModel extends ErpModel
 {
     protected $table          = 'project_purchase_orders';
     protected $primaryKey     = 'id';
@@ -13,6 +11,8 @@ class PurchaseOrderModel extends Model
 
     protected $allowedFields = [
         'project_id',
+        'tenant_id',
+        'branch_id',
         'vendor_id',
         'po_number',
         'title',

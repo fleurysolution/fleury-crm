@@ -20,9 +20,14 @@ class FieldManagement extends BaseAppController
      */
     public function storePunchList(int $projectId): \CodeIgniter\HTTP\RedirectResponse
     {
+        $project = (new ProjectModel())->find($projectId);
+        if (!$project) return redirect()->back()->with('error', 'Project not found.');
+
         $plModel = new PunchListModel();
 
         $data = [
+            'tenant_id'   => $project['tenant_id'],
+            'branch_id'   => $project['branch_id'],
             'project_id'  => $projectId,
             'item_no'     => $this->request->getPost('item_no'),
             'location'    => $this->request->getPost('location'),
@@ -34,6 +39,32 @@ class FieldManagement extends BaseAppController
         ];
 
         $plModel->insert($data);
+        $insertId = $plModel->getInsertID();
+
+        // Handle File Upload or Webcam Capture
+        $file = $this->request->getFile('attachment');
+        $webcamImage = $this->request->getPost('webcam_image');
+
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $newName = $file->getRandomName();
+            $file->move(FCPATH . 'uploads/punch_list', $newName);
+            $plModel->update($insertId, ['attachment_path' => 'uploads/punch_list/' . $newName]);
+        } elseif (!empty($webcamImage)) {
+            // Handle base64 from webcam
+            $parts = explode(',', $webcamImage);
+            if (count($parts) === 2) {
+                $imageData = base64_decode($parts[1]);
+                $newName = 'webcam_' . time() . '_' . bin2hex(random_bytes(4)) . '.jpg';
+                $path = FCPATH . 'uploads/punch_list/' . $newName;
+                
+                if (!is_dir(FCPATH . 'uploads/punch_list')) {
+                    mkdir(FCPATH . 'uploads/punch_list', 0777, true);
+                }
+                
+                file_put_contents($path, $imageData);
+                $plModel->update($insertId, ['attachment_path' => 'uploads/punch_list/' . $newName]);
+            }
+        }
 
         // If assigned, send a notification
         if ($data['assigned_to']) {
@@ -41,7 +72,7 @@ class FieldManagement extends BaseAppController
                 $data['assigned_to'], 
                 'punch_assignment', 
                 "You were assigned a new Punch List Item: {$data['item_no']} - {$data['description']}", 
-                "projects/{$projectId}?tab=field"
+                ['url' => "projects/{$projectId}?tab=field"]
             );
         }
 
@@ -75,7 +106,7 @@ class FieldManagement extends BaseAppController
                 $item['created_by'], 
                 'punch_resolved', 
                 "Item {$item['item_no']} was marked Resolved.", 
-                "projects/{$item['project_id']}?tab=field"
+                ['url' => "projects/{$item['project_id']}?tab=field"]
             );
         }
 
@@ -136,6 +167,8 @@ class FieldManagement extends BaseAppController
         }
 
         $diaryId = $dModel->insert([
+            'tenant_id'          => $project['tenant_id'],
+            'branch_id'          => $project['branch_id'],
             'project_id'         => $projectId,
             'report_date'        => $this->request->getPost('report_date') ?: date('Y-m-d'),
             'weather_conditions' => $weatherDesc,

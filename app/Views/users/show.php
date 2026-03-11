@@ -89,6 +89,72 @@
                             </select>
                             <div class="form-text" style="font-size: 0.75rem;">Only required for external Portal Users.</div>
                         </div>
+
+                        <div class="col-12 mt-4 mb-2">
+                            <h6 class="fw-bold border-bottom pb-2">Organizational & ABAC Settings</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Branch <span class="text-danger">*</span></label>
+                            <select name="branch_id" class="form-select" required>
+                                <option value="">— Select Branch —</option>
+                                <?php if(isset($branches)): foreach ($branches as $b): ?>
+                                <option value="<?= (int)$b['id'] ?>" <?= ($user['branch_id']??null)==$b['id'] ? 'selected':'' ?>>
+                                    <?= esc($b['name']) ?>
+                                </option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Department</label>
+                            <select name="department_id" class="form-select">
+                                <option value="">— Select Department —</option>
+                                <?php if(isset($departments)): foreach ($departments as $d): ?>
+                                <option value="<?= (int)$d['id'] ?>" <?= ($user['department_id']??null)==$d['id'] ? 'selected':'' ?>>
+                                    <?= esc($d['name']) ?>
+                                </option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Reporting Manager</label>
+                            <select name="reporting_manager_id" class="form-select">
+                                <option value="">— None —</option>
+                                <?php if(isset($managers)): foreach ($managers as $m): ?>
+                                <option value="<?= (int)$m['id'] ?>" <?= ($user['reporting_manager_id']??null)==$m['id'] ? 'selected':'' ?>>
+                                    <?= esc($m['first_name'] . ' ' . $m['last_name']) ?>
+                                </option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Employment Type</label>
+                            <select name="employment_type" class="form-select">
+                                <option value="">— Select Type —</option>
+                                <option value="Employee" <?= ($user['employment_type']??'')==='Employee' ? 'selected':'' ?>>Employee</option>
+                                <option value="Contractor" <?= ($user['employment_type']??'')==='Contractor' ? 'selected':'' ?>>Contractor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Approval Authority Level</label>
+                            <input type="number" name="approval_authority_level" class="form-control" value="<?= esc($user['approval_authority_level']??0) ?>" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Geo Access Permission</label>
+                            <select name="geo_access_permission" class="form-select">
+                                <option value="branch" <?= ($user['geo_access_permission']??'')==='branch' ? 'selected':'' ?>>Branch Only</option>
+                                <option value="region" <?= ($user['geo_access_permission']??'')==='region' ? 'selected':'' ?>>Region Wide</option>
+                                <option value="global" <?= ($user['geo_access_permission']??'')==='global' ? 'selected':'' ?>>Global (All Regions)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Payroll Profile ID</label>
+                            <input type="number" name="payroll_profile_id" class="form-control" value="<?= esc($user['payroll_profile_id']??'') ?>" min="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tax Profile ID</label>
+                            <input type="number" name="tax_profile_id" class="form-control" value="<?= esc($user['tax_profile_id']??'') ?>" min="1">
+                        </div>
+
                     </div>
                     <div class="mt-3 d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>

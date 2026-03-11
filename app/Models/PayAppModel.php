@@ -4,22 +4,19 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class PayAppModel extends Model
+class PayAppModel extends ErpModel
 {
     protected $table          = 'project_pay_apps';
     protected $primaryKey     = 'id';
-    protected $returnType     = 'array';
-    protected $useSoftDeletes = false; 
-
     protected $allowedFields = [
+        'tenant_id',
+        'branch_id',
         'project_id',
         'application_no',
         'period_to',
         'status',
         'retainage_percentage',
-        'created_by',
-        'created_at',
-        'updated_at'
+        'created_by'
     ];
 
     protected $useTimestamps = true;

@@ -2,16 +2,14 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class ClientModel extends Model
+class ClientModel extends ErpModel
 {
     protected $table          = 'clients';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
     protected $useSoftDeletes = true;
     protected $allowedFields  = [
-        'type', 'company_name', 'website', 'phone', 'address', 'city', 'state', 'zip', 'country',
+        'tenant_id', 'branch_id', 'type', 'company_name', 'website', 'phone', 'address', 'city', 'state', 'zip', 'country',
         'vat_number', 'gst_number', 'currency', 'currency_symbol', 'labels', 'status', 
         'owner_id', 'created_by'
     ];

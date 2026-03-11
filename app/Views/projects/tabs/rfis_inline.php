@@ -1,8 +1,7 @@
 <?php
 // app/Views/projects/tabs/rfis_inline.php
 // Included inside show.php — has access to $project
-$rfiModel = new \App\Models\RFIModel();
-$rfiModel->where('project_id', $project['id'])->where('deleted_at IS NULL');
+$rfiModel = new \App\Models\RfiModel();
 $rfis   = $rfiModel->forProject($project['id']);
 $counts = $rfiModel->statusCounts($project['id']);
 
@@ -106,7 +105,11 @@ $areas   = (new \App\Models\AreaModel())->where('project_id', $project['id'])->f
     </div>
     <div class="modal-body">
         <div class="row g-3">
-            <div class="col-12">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">RFI Number <span class="text-danger">*</span></label>
+                <input type="text" id="rfiNumber" class="form-control" placeholder="e.g. RFI-001" required>
+            </div>
+            <div class="col-md-9">
                 <label class="form-label small fw-semibold">Title <span class="text-danger">*</span></label>
                 <input type="text" id="rfiTitle" class="form-control" placeholder="What is the question or issue?">
             </div>
@@ -171,9 +174,12 @@ function updateRfiStatus(id, status) {
 
 function submitNewRfi() {
     const title = document.getElementById('rfiTitle').value.trim();
+    const number = document.getElementById('rfiNumber').value.trim();
+    if (!number) { alert('Please enter an RFI Number.'); return; }
     if (!title) { alert('Please enter a title.'); return; }
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
+    fd.append('rfi_number',  document.getElementById('rfiNumber').value.trim());
     fd.append('title',       title);
     fd.append('description', document.getElementById('rfiDesc').value);
     fd.append('discipline',  document.getElementById('rfiDiscipline').value);

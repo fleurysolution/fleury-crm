@@ -15,6 +15,8 @@ class ProjectProgressPhotoModel extends Model
     protected $allowedFields = [
         'project_id',
         'photo_path',
+        'title',
+        'description',
         'caption',
         'uploaded_by',
     ];

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class FsAsApprovalCommentModel extends Model
+class FsApprovalCommentModel extends Model
 {
     protected $table         = 'fs_as_approval_comments';
     protected $primaryKey    = 'id';

@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Models\BidModel;
+use App\Models\ProjectBidModel;
 use App\Models\ProjectModel;
 
 class Bids extends BaseAppController
@@ -13,7 +13,11 @@ class Bids extends BaseAppController
      */
     public function store(int $projectId): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
     {
+        $project = (new ProjectModel())->find($projectId);
+
         $bidData = [
+            'tenant_id'     => $project['tenant_id'],
+            'branch_id'     => $project['branch_id'],
             'project_id'    => $projectId,
             'trade_package' => $this->request->getPost('trade_package'),
             'vendor_name'   => $this->request->getPost('vendor_name'),
@@ -33,7 +37,7 @@ class Bids extends BaseAppController
             $bidData['quote_filepath'] = 'bids/' . $newName;
         }
 
-        (new BidModel())->insert($bidData);
+        (new ProjectBidModel())->insert($bidData);
 
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(['success' => true]);
@@ -47,7 +51,7 @@ class Bids extends BaseAppController
      */
     public function updateStatus(int $id): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
     {
-        $bModel = new BidModel();
+        $bModel = new ProjectBidModel();
         $bid = $bModel->find($id);
         if (!$bid) return $this->response->setJSON(['success' => false, 'message' => 'Bid not found.']);
 
@@ -72,7 +76,7 @@ class Bids extends BaseAppController
                 $bid['created_by'],
                 $notifType,
                 $msg,
-                "projects/{$bid['project_id']}?tab=estimates"
+                ['url' => "projects/{$bid['project_id']}?tab=estimates"]
             );
         }
 
@@ -87,7 +91,7 @@ class Bids extends BaseAppController
      */
     public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
-        $bModel = new BidModel();
+        $bModel = new ProjectBidModel();
         $bid = $bModel->find($id);
         if ($bid) {
             $bModel->delete($id);

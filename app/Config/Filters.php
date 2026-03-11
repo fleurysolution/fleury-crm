@@ -37,6 +37,7 @@ class Filters extends BaseFilters
         'locale'        => \App\Filters\LocaleFilter::class,
         'permission'    => \App\Filters\PermissionFilter::class,
         'auth'          => \App\Filters\AuthFilter::class,
+        'abac'          => \App\Filters\AbacFilter::class,
     ];
 
     /**
@@ -79,6 +80,7 @@ class Filters extends BaseFilters
             // 'csrf',
             // 'invalidchars',
             'locale',
+            'abac',
         ],
         'after' => [
             // 'honeypot',

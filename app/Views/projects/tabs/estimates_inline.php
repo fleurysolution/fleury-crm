@@ -1,6 +1,6 @@
 <?php
-$eModel = new \App\Models\EstimateModel();
-$bModel = new \App\Models\BidModel();
+$eModel = new \App\Models\ProjectEstimateModel();
+$bModel = new \App\Models\ProjectBidModel();
 
 $estimates = $eModel->forProject($project['id']);
 $bids      = $bModel->forProject($project['id']);

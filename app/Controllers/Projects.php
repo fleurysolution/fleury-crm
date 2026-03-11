@@ -10,6 +10,15 @@ use App\Models\ProjectMemberModel;
 use App\Models\TaskModel;
 use App\Models\ClientModel;
 use App\Models\UserModel;
+use App\Models\ChangeEventModel;
+use App\Models\ChangeOrderModel;
+use App\Models\MeetingModel;
+use App\Models\BudgetModel;
+use App\Models\BidPackageModel;
+use App\Models\BidModel;
+use App\Models\ProjectBudgetItemModel;
+use App\Models\CostCodeModel;
+use App\Services\AutomationService;
 
 class Projects extends BaseAppController
 {
@@ -22,6 +31,16 @@ class Projects extends BaseAppController
     protected \App\Models\SubmittalModel     $submittals;
     protected \App\Models\DrawingModel       $drawings;
     protected \App\Models\ProjectProgressPhotoModel $photos;
+    protected ChangeEventModel $events;
+    protected ChangeOrderModel $orders;
+    protected MeetingModel $meetings_model;
+    protected BudgetModel $budget_model;
+    protected BidPackageModel $bid_packages;
+    protected BidModel           $bid_model;
+    protected ProjectBudgetItemModel $budget_items_model;
+    protected CostCodeModel      $cost_codes_model;
+    protected AutomationService  $automation;
+
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request,
                                    \CodeIgniter\HTTP\ResponseInterface $response,
@@ -37,16 +56,53 @@ class Projects extends BaseAppController
         $this->submittals = new \App\Models\SubmittalModel(); // Added
         $this->drawings   = new \App\Models\DrawingModel(); // Added
         $this->photos     = new \App\Models\ProjectProgressPhotoModel(); // Added
+        $this->events     = new ChangeEventModel();
+        $this->orders     = new ChangeOrderModel();
+        $this->meetings_model = new MeetingModel();
+        $this->budget_model   = new BudgetModel();
+        $this->bid_packages   = new BidPackageModel();
+        $this->bid_model      = new BidModel();
+        $this->budget_items_model = new ProjectBudgetItemModel();
+        $this->cost_codes_model   = new CostCodeModel();
+        $this->automation     = new AutomationService();
     }
 
     // ── LIST ─────────────────────────────────────────────────────────────
     public function index(): string
     {
+        $viewMode = $this->request->getGet('view') ?? 'grid';
         $filter   = $this->request->getGet('status') ?? 'all';
-        $q        = $this->projects->withDetails();
+        $clientId = $this->request->getGet('client_id');
+        $branchId = $this->request->getGet('branch_id');
+        $start    = $this->request->getGet('start_date');
+        $end      = $this->request->getGet('end_date');
+        $search   = $this->request->getGet('search');
+
+        $q = $this->projects->withDetails();
+
         if ($filter !== 'all') {
             $q->where('projects.status', $filter);
         }
+        if (!empty($clientId)) {
+            $q->where('projects.client_id', $clientId);
+        }
+        if (!empty($branchId)) {
+            $q->where('projects.branch_id', $branchId);
+        }
+        if (!empty($start)) {
+            $q->where('projects.start_date >=', $start);
+        }
+        if (!empty($end)) {
+            $q->where('projects.end_date <=', $end);
+        }
+        if (!empty($search)) {
+            $q->groupStart()
+              ->like('projects.title', $search)
+              ->orLike('projects.description', $search)
+              ->orLike('clients.company_name', $search)
+              ->groupEnd();
+        }
+
         $projects = $q->orderBy('projects.created_at','DESC')->findAll();
 
         $counts = [];
@@ -54,11 +110,17 @@ class Projects extends BaseAppController
             $counts[$s] = $this->projects->where('status', $s)->countAllResults();
         }
 
+        $clients  = model(ClientModel::class)->select('id,company_name')->orderBy('company_name', 'ASC')->findAll();
+        $branches = model(\App\Models\Office_model::class)->where('deleted', 0)->orderBy('name', 'ASC')->findAll();
+
         return $this->render('projects/index', [
             'title'    => 'Projects',
             'projects' => $projects,
             'filter'   => $filter,
             'counts'   => $counts,
+            'viewMode' => $viewMode,
+            'clients'  => $clients,
+            'branches' => $branches,
         ]);
     }
 
@@ -83,14 +145,22 @@ class Projects extends BaseAppController
             'client_id'   => $this->request->getPost('client_id') ?: null,
             'pm_user_id'  => $this->request->getPost('pm_user_id') ?: null,
             'status'      => $this->request->getPost('status') ?? 'draft',
+            'project_stage'=> $this->request->getPost('project_stage') ?? 'pre_construction',
             'priority'    => $this->request->getPost('priority') ?? 'medium',
             'start_date'  => $this->request->getPost('start_date') ?: null,
             'end_date'    => $this->request->getPost('end_date') ?: null,
             'budget'      => $this->request->getPost('budget') ?: null,
+            'contract_type'=> $this->request->getPost('contract_type') ?: null,
+            'versioned_budget_baseline' => $this->request->getPost('versioned_budget_baseline') ?: null,
             'currency'    => $this->request->getPost('currency') ?? 'USD',
             'description' => $this->request->getPost('description') ?: null,
             'color'       => $this->request->getPost('color') ?? '#4a90e2',
+            'latitude'    => $this->request->getPost('latitude') ?: null,
+            'longitude'   => $this->request->getPost('longitude') ?: null,
+            'geofence_radius' => $this->request->getPost('geofence_radius') ?: 100,
             'created_by'  => session()->get('user_id'),
+            'tenant_id'   => session()->get('tenant_id'),
+            'branch_id'   => session()->get('branch_id'),
         ];
 
         if (!trim($data['title'])) {
@@ -98,6 +168,7 @@ class Projects extends BaseAppController
         }
 
         $id = $this->projects->insert($data);
+        $this->automation->trigger('projects', 'create', array_merge(['id' => $id], $data), session()->get('tenant_id'));
 
         // Auto-add creator as PM member
         $this->members->insert([
@@ -142,6 +213,15 @@ class Projects extends BaseAppController
             'submittals' => $submittals, // Added
             'drawings'   => $drawings, // Added
             'photos'     => $photos, // Added
+            'change_events' => ($tab === 'change_management') ? $this->events->getForProject($id, session()->get('tenant_id')) : [],
+            'change_orders' => ($tab === 'change_management') ? $this->orders->getForProject($id, session()->get('tenant_id')) : [],
+            'meetings'      => ($tab === 'meetings') ? $this->meetings_model->getForProject($id, session()->get('tenant_id')) : [],
+            'budget_data'   => ($tab === 'finance' || $tab === 'finance_wip') ? $this->budget_model->getProjectFinancials($id, session()->get('tenant_id')) : null,
+            'bid_packages'  => ($tab === 'bidding') ? $this->bid_packages->getForProject($id, session()->get('tenant_id')) : [],
+            'bids_per_package' => ($tab === 'bidding') ? $this->getBidsPerPackage($id) : [],
+            'drawings_list' => ($tab === 'drawings') ? $this->drawings->where('project_id', $id)->where('tenant_id', session()->get('tenant_id'))->findAll() : [],
+            'budget_items'  => ($tab === 'finance') ? $this->budget_items_model->getForProject($id, session()->get('tenant_id')) : [],
+            'cost_codes'    => ($tab === 'finance') ? $this->cost_codes_model->forProject($id) : [],
         ]);
     }
 
@@ -168,15 +248,23 @@ class Projects extends BaseAppController
             'client_id'   => $this->request->getPost('client_id') ?: null,
             'pm_user_id'  => $this->request->getPost('pm_user_id') ?: null,
             'status'      => $this->request->getPost('status') ?? 'active',
+            'project_stage'=> $this->request->getPost('project_stage') ?? 'active',
             'priority'    => $this->request->getPost('priority') ?? 'medium',
             'start_date'  => $this->request->getPost('start_date') ?: null,
             'end_date'    => $this->request->getPost('end_date') ?: null,
             'budget'      => $this->request->getPost('budget') ?: null,
+            'contract_type'=> $this->request->getPost('contract_type') ?: null,
+            'versioned_budget_baseline' => $this->request->getPost('versioned_budget_baseline') ?: null,
             'currency'    => $this->request->getPost('currency') ?? 'USD',
             'description' => $this->request->getPost('description') ?: null,
             'color'       => $this->request->getPost('color') ?? '#4a90e2',
+            'latitude'    => $this->request->getPost('latitude') ?: null,
+            'longitude'   => $this->request->getPost('longitude') ?: null,
+            'geofence_radius' => $this->request->getPost('geofence_radius') ?: 100,
         ];
         $this->projects->update($id, $data);
+        $this->automation->trigger('projects', 'update', array_merge(['id' => $id], $data), session()->get('tenant_id'));
+
         return redirect()->to(site_url("projects/{$id}"))->with('message', 'Project updated.');
     }
 
@@ -252,28 +340,74 @@ class Projects extends BaseAppController
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
         $uploaded = [];
-        $uploadFiles = is_array($files['photos']) ? $files['photos'] : [$files['photos']];
+        $files = $this->request->getFiles();
+        $webcamPhotos = $this->request->getPost('webcam_photos') ?: [];
 
-        foreach ($uploadFiles as $file) {
-            if ($file->isValid() && !$file->hasMoved()) {
-                $name = $file->getRandomName();
-                $file->move($dir, $name);
+        // Handle File Uploads
+        if (!empty($files['photos'])) {
+            $uploadFiles = is_array($files['photos']) ? $files['photos'] : [$files['photos']];
+            $titles = $this->request->getPost('file_titles') ?: [];
+            $descriptions = $this->request->getPost('file_descriptions') ?: [];
 
-                $id = $this->photos->insert([
-                    'project_id'  => $projectId,
-                    'photo_path'  => "uploads/projects/{$projectId}/progress/{$name}",
-                    'caption'     => $file->getClientName(),
-                    'uploaded_by' => session()->get('user_id')
-                ]);
-                $uploaded[] = $this->photos->find($id);
+            foreach ($uploadFiles as $index => $file) {
+                if ($file->isValid() && !$file->hasMoved()) {
+                    $name = $file->getRandomName();
+                    $file->move($dir, $name);
+                    
+                    // Resize image for optimization (Max width 1200px)
+                    $image = \Config\Services::image()
+                        ->withFile($dir . $name)
+                        ->resize(1200, 1200, true, 'width')
+                        ->save($dir . $name);
+
+                    $this->photos->insert([
+                        'project_id'  => $projectId,
+                        'photo_path'  => "uploads/projects/{$projectId}/progress/{$name}",
+                        'title'       => $titles[$index] ?? '',
+                        'description' => $descriptions[$index] ?? '',
+                        'caption'     => $file->getClientName(),
+                        'uploaded_by' => session()->get('user_id')
+                    ]);
+                }
             }
         }
 
-        if (empty($uploaded)) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Failed to process files.']);
+        // Handle Webcam Photos (Base64)
+        if (!empty($webcamPhotos)) {
+            $titles = $this->request->getPost('cap_titles') ?: [];
+            $descriptions = $this->request->getPost('cap_descriptions') ?: [];
+
+            foreach ($webcamPhotos as $index => $data) {
+                if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
+                    $data = substr($data, strpos($data, ',') + 1);
+                    $type = strtolower($type[1]); // jpg, png, gif
+                    $data = base64_decode($data);
+                    
+                    if ($data !== false) {
+                        $name = time() . '_' . uniqid() . '.' . $type;
+                        $fullPath = $dir . DIRECTORY_SEPARATOR . $name;
+                        file_put_contents($fullPath, $data);
+                        
+                        // Resize webcam snap too
+                        \Config\Services::image()
+                            ->withFile($fullPath)
+                            ->resize(1200, 1200, true, 'width')
+                            ->save($fullPath);
+
+                        $this->photos->insert([
+                            'project_id'  => $projectId,
+                            'photo_path'  => "uploads/projects/{$projectId}/progress/{$name}",
+                            'title'       => $titles[$index] ?? '',
+                            'description' => $descriptions[$index] ?? '',
+                            'caption'     => 'Webcam Capture ' . ($index + 1),
+                            'uploaded_by' => session()->get('user_id')
+                        ]);
+                    }
+                }
+            }
         }
 
-        return $this->response->setJSON(['success' => true, 'photos' => $uploaded]);
+        return $this->response->setJSON(['success' => true]);
     }
 
     public function deleteProgressPhoto(int $projectId, int $photoId)
@@ -292,35 +426,131 @@ class Projects extends BaseAppController
     // ── PDF GENERATOR ────────────────────────────────────────────────────
     public function generateProgressReport(int $projectId)
     {
-        $project = $this->projects->find($projectId);
-        if (!$project) {
-            return redirect()->back()->with('error', 'Project not found.');
-        }
+        $start = $this->request->getGet('start_date');
+        $end   = $this->request->getGet('end_date');
 
-        $photos = $this->photos->where('project_id', $projectId)->orderBy('created_at', 'DESC')->findAll();
+        $query = $this->photos->where('project_id', $projectId);
+        if ($start) $query->where('created_at >=', $start . ' 00:00:00');
+        if ($end)   $query->where('created_at <=', $end . ' 23:59:59');
+        
+        $photos = $query->orderBy('created_at', 'DESC')->findAll();
 
         if (empty($photos)) {
-            return redirect()->back()->with('error', 'No photos available to generate a report.');
+            return redirect()->back()->with('error', 'No photos available for the selected range.');
         }
 
+        // Project details with client information
+        $projectDetails = $this->projects->withDetails()->find($projectId);
+
+        $t1 = microtime(true);
         $data = [
-            'project' => $project,
-            'photos'  => $photos,
-            'date'    => date('F j, Y'),
+            'project'     => $projectDetails,
+            'photos'      => $photos,
+            'date'        => date('F j, Y'),
+            'appSettings' => $this->appSettings,
         ];
 
         $html = view('projects/progress_report_pdf', $data);
+        $t3 = microtime(true);
+
+        $tempDir = WRITEPATH . 'temp';
+        if (!is_dir($tempDir)) mkdir($tempDir, 0755, true);
 
         $options = new \Dompdf\Options();
         $options->set('isRemoteEnabled', true);
+        $options->set('chroot', FCPATH); // Allow local files
         $options->set('isHtml5ParserEnabled', true);
+        $options->set('enable_font_subsetting', false); 
+        $options->set('defaultFont', 'Helvetica');
+        $options->set('tempDir', $tempDir);
 
         $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->setBasePath(FCPATH);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
+        $t4 = microtime(true);
 
-        $filename = "Progress_Report_" . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $project['title']) . "_" . date('Ymd') . ".pdf";
+        log_message('error', sprintf(
+            "PDF Perf [%d photos]: View: %.3fs, Render: %.3fs, Total: %.3fs",
+            count($photos),
+            $t3 - $t1,
+            $t4 - $t3,
+            $t4 - $t1
+        ));
+
+        $filename = "Progress_Report_" . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $projectDetails['title']) . "_" . date('Ymd') . ".pdf";
         $dompdf->stream($filename, ["Attachment" => false]);
+    }
+
+    public function distributeReport(int $projectId)
+    {
+        $recipients = $this->request->getPost('recipients') ?: [];
+        $customEmails = $this->request->getPost('custom_emails');
+        $message = $this->request->getPost('message');
+
+        if ($customEmails) {
+            $parts = explode(',', $customEmails);
+            foreach ($parts as $p) {
+                $email = trim($p);
+                if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $recipients[] = $email;
+                }
+            }
+        }
+
+        if (empty($recipients)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No valid recipients selected.']);
+        }
+
+        // Generate PDF content
+        $project = $this->projects->withDetails()->find($projectId);
+        $start = $this->request->getPost('start_date');
+        $end   = $this->request->getPost('end_date');
+
+        $query = $this->photos->where('project_id', $projectId);
+        if ($start) $query->where('created_at >=', $start . ' 00:00:00');
+        if ($end)   $query->where('created_at <=', $end . ' 23:59:59');
+        $photos = $query->orderBy('created_at', 'DESC')->findAll();
+
+        $html = view('projects/progress_report_pdf', [
+            'project'     => $project,
+            'photos'      => $photos,
+            'date'        => date('F j, Y'),
+            'appSettings' => $this->appSettings
+        ]);
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('chroot', FCPATH);
+        $options->set('enable_font_subsetting', false);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+
+        // Send Email
+        $emailService = \Config\Services::email();
+        $emailService->setTo($recipients);
+        $emailService->setSubject("Site Progress Report: " . $project['title']);
+        $emailService->setMessage($message ?: "Please find the attached site progress report for " . $project['title']);
+        $emailService->attach($pdfOutput, 'Progress_Report_' . time() . '.pdf', 'application/pdf');
+
+        if ($emailService->send()) {
+            return $this->response->setJSON(['success' => true]);
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to send emails.']);
+        }
+    }
+
+    private function getBidsPerPackage(int $projectId): array
+    {
+        $packages = $this->bid_packages->where('project_id', $projectId)->findAll();
+        $bids_per_package = [];
+        foreach ($packages as $pkg) {
+            $bids_per_package[$pkg['id']] = $this->bids->getForPackage($pkg['id']);
+        }
+        return $bids_per_package;
     }
 }

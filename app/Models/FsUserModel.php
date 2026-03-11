@@ -4,14 +4,22 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class FsUserModel extends Model
+class FsUserModel extends ErpModel
 {
     protected $table          = 'fs_users';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
     protected $useSoftDeletes = true;
 
+    // Users are tenant-level, they don't necessarily belong to a single branch for access purposes,
+    // though they have a primary branch_id. We handle their access via geo_access_permission.
+    protected $enforceBranchLinkage = false;
+
     protected $allowedFields  = [
+        'tenant_id',
+        'branch_id',
+        'department_id',
+        'geo_access_permission',
         'employee_code',
         'email',
         'password_hash',

@@ -4,14 +4,14 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class ProjectInvoiceModel extends Model
+class ProjectInvoiceModel extends ErpModel
 {
     protected $table          = 'project_invoices';
     protected $primaryKey     = 'id';
     protected $useTimestamps  = true;
     protected $useSoftDeletes = true;
     protected $allowedFields  = [
-        'project_id','contract_id','cert_id','invoice_number','direction',
+        'tenant_id','branch_id','project_id','contract_id','cert_id','invoice_number','direction',
         'party_name','invoice_date','due_date','subtotal','tax_amount',
         'total_amount','paid_amount','status','notes','filepath','created_by',
     ];

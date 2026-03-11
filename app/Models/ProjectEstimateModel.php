@@ -4,7 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class ProjectEstimateModel extends Model
+class ProjectEstimateModel extends ErpModel
 {
     protected $table          = 'project_estimates';
     protected $primaryKey     = 'id';
@@ -12,6 +12,8 @@ class ProjectEstimateModel extends Model
     protected $useSoftDeletes = true;
 
     protected $allowedFields = [
+        'tenant_id',
+        'branch_id',
         'project_id',
         'title',
         'status',

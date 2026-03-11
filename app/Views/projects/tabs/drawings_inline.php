@@ -51,11 +51,11 @@ $disciplines = [
                     ?>
                     <tr>
                         <td class="ps-3 fw-bold">
-                            <i class="fa-regular fa-file-pdf text-danger me-2"></i><?= esc($drw['drawing_no']) ?>
+                            <i class="fa-regular fa-file-pdf text-danger me-2"></i><?= esc($drw['drawing_number']) ?>
                         </td>
                         <td><?= esc($drw['title']) ?></td>
                         <td><span class="badge bg-light text-dark border"><?= esc($drw['discipline']) ?></span></td>
-                        <td><span class="badge bg-info-subtle text-info">Rev <?= esc($drw['current_revision']) ?></span></td>
+                        <td><span class="badge bg-info-subtle text-info">Rev <?= esc($drw['revision']) ?></span></td>
                         <td><span class="badge bg-<?= $badgeColor ?>-subtle text-<?= $badgeColor ?>"><?= esc($drw['status']) ?></span></td>
                         <td>
                             <div class="d-flex align-items-center gap-2">

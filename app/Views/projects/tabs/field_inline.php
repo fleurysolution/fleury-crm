@@ -29,6 +29,7 @@ $users = (new \App\Models\UserModel())->findAll();
                             <th>Assignee</th>
                             <th>Due Date</th>
                             <th class="pe-3">Status</th>
+                            <th>Attachment</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -68,6 +69,15 @@ $users = (new \App\Models\UserModel())->findAll();
                                                 <option value="Closed" <?= $pi['status'] === 'Closed' ? 'selected' : '' ?>>Closed</option>
                                             </select>
                                         </form>
+                                    </td>
+                                    <td>
+                                        <?php if ($pi['attachment_path']): ?>
+                                            <a href="<?= base_url($pi['attachment_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary p-1">
+                                                <i class="fa-solid fa-paperclip"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-muted small">None</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <form action="<?= site_url("punch/{$pi['id']}/delete") ?>" method="POST" onsubmit="return confirm('Delete this punch item?');">
@@ -132,7 +142,7 @@ $users = (new \App\Models\UserModel())->findAll();
 <!-- Add Punch Item Modal -->
 <div class="modal fade" id="newPunchModal" tabindex="-1">
     <div class="modal-dialog">
-        <form action="<?= site_url("projects/{$project['id']}/punch") ?>" method="POST" class="modal-content border-0 shadow">
+        <form action="<?= site_url("projects/{$project['id']}/punch") ?>" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow">
             <?= csrf_field() ?>
             <div class="modal-header bg-light border-0">
                 <h5 class="modal-title fw-bold">Log Punch Item</h5>
@@ -170,6 +180,25 @@ $users = (new \App\Models\UserModel())->findAll();
                         <input type="date" name="due_date" class="form-control">
                     </div>
                 </div>
+
+                <div class="mt-3">
+                    <label class="form-label small fw-bold">Attachment</label>
+                    <div class="d-flex flex-column gap-2">
+                        <div id="webcamContainer" class="d-none border rounded bg-black position-relative" style="aspect-ratio: 4/3; overflow: hidden;">
+                            <video id="webcamVideo" class="w-100 h-100" autoplay playsinline style="object-fit: cover;"></video>
+                            <canvas id="webcamCanvas" class="d-none"></canvas>
+                            <img id="webcamPreview" class="d-none w-100 h-100" style="object-fit: cover;">
+                            <div class="position-absolute bottom-0 start-0 e-100 w-100 p-2 d-flex justify-content-center gap-2 bg-dark bg-opacity-50">
+                                <button type="button" id="snapBtn" class="btn btn-sm btn-light border-0"><i class="fa-solid fa-camera me-1"></i>Snap</button>
+                                <button type="button" id="retakeBtn" class="btn btn-sm btn-outline-light border-0 d-none">Retake</button>
+                                <button type="button" id="closeWebcamBtn" class="btn btn-sm btn-outline-light border-0">Cancel</button>
+                            </div>
+                        </div>
+                        <input type="file" name="attachment" id="punchAttachment" class="form-control form-control-sm" accept="image/*">
+                        <button type="button" id="openWebcamBtn" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-video me-1"></i>Use Camera</button>
+                        <input type="hidden" name="webcam_image" id="webcamImageInput">
+                    </div>
+                </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -180,3 +209,73 @@ $users = (new \App\Models\UserModel())->findAll();
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const video = document.getElementById('webcamVideo');
+    const canvas = document.getElementById('webcamCanvas');
+    const preview = document.getElementById('webcamPreview');
+    const webcamContainer = document.getElementById('webcamContainer');
+    const fileInput = document.getElementById('punchAttachment');
+    const webcamImageInput = document.getElementById('webcamImageInput');
+    const snapBtn = document.getElementById('snapBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    let stream = null;
+
+    document.getElementById('openWebcamBtn').onclick = async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = stream;
+            webcamContainer.classList.remove('d-none');
+            fileInput.classList.add('d-none');
+            document.getElementById('openWebcamBtn').classList.add('d-none');
+            preview.classList.add('d-none');
+            video.classList.remove('d-none');
+            snapBtn.classList.remove('d-none');
+            retakeBtn.classList.add('d-none');
+        } catch (err) {
+            alert("Could not access camera: " + err.message);
+        }
+    };
+
+    snapBtn.onclick = () => {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = canvas.toDataURL('image/jpeg');
+        webcamImageInput.value = imageData;
+        
+        preview.src = imageData;
+        preview.classList.remove('d-none');
+        video.classList.add('d-none');
+        snapBtn.classList.add('d-none');
+        retakeBtn.classList.remove('d-none');
+    };
+
+    retakeBtn.onclick = () => {
+        webcamImageInput.value = '';
+        preview.classList.add('d-none');
+        video.classList.remove('d-none');
+        snapBtn.classList.remove('d-none');
+        retakeBtn.classList.add('d-none');
+    };
+
+    function stopWebcam() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        webcamContainer.classList.add('d-none');
+        fileInput.classList.remove('d-none');
+        document.getElementById('openWebcamBtn').classList.remove('d-none');
+        webcamImageInput.value = '';
+    }
+
+    document.getElementById('closeWebcamBtn').onclick = stopWebcam;
+    
+    // Stop webcam if modal is closed
+    document.getElementById('newPunchModal').addEventListener('hidden.bs.modal', stopWebcam);
+});
+</script>

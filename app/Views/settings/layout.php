@@ -81,6 +81,10 @@
                         ['tab'=>'offices',           'icon'=>'fa-building-columns','label'=>'Offices',             'url'=>'settings/branches/offices'],
                         ['tab'=>'divisions',         'icon'=>'fa-layer-group',     'label'=>'Divisions',           'url'=>'settings/branches/divisions'],
                     ],
+                    'Data Modeling' => [
+                        ['tab'=>'custom_hub',        'icon'=>'fa-cube',            'label'=>'Custom Hub',          'url'=>'settings/custom-hub'],
+                        ['tab'=>'custom_fields',     'icon'=>'fa-list',            'label'=>'Custom Fields',       'url'=>'settings/custom-fields'],
+                    ],
                 ];
                 foreach ($navGroups as $groupLabel => $items):
                 ?>

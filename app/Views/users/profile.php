@@ -86,6 +86,58 @@
             </div>
         </div>
 
+        <!-- Subscription & Billing (Admin Only) -->
+        <?php if (session()->get('is_admin')): ?>
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fa-solid fa-credit-card me-2 text-success"></i>Subscription & Billing</h6>
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded border">
+                    <div>
+                        <div class="small text-muted text-uppercase fw-bold">Current Plan</div>
+                        <div class="h5 fw-bold mb-0 text-primary" id="currentPlanName">Loading...</div>
+                    </div>
+                    <div>
+                        <span class="badge bg-success" id="subscriptionStatus">Active</span>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <a href="<?= site_url('subscriptions/upgrade') ?>" class="btn btn-outline-primary w-100">
+                                <i class="fa-solid fa-arrow-up-right-dots me-2"></i>Upgrade Plan
+                            </a>
+                        </div>
+                        <div class="col-sm-6">
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="cancelSubscription()">
+                                <i class="fa-solid fa-ban me-2"></i>Cancel Subscription
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            async function loadSubscription() {
+                const r = await fetch('<?= site_url('subscriptions/current') ?>');
+                const d = await r.json();
+                if (d.success) {
+                    document.getElementById('currentPlanName').textContent = d.package.name;
+                    document.getElementById('subscriptionStatus').textContent = d.subscription.status;
+                }
+            }
+            async function cancelSubscription() {
+                if (confirm('Are you sure you want to cancel your subscription? This will disable premium features.')) {
+                    const r = await fetch('<?= site_url('subscriptions/cancel') ?>', { method: 'POST' });
+                    const d = await r.json();
+                    alert(d.message);
+                    location.reload();
+                }
+            }
+            loadSubscription();
+        </script>
+        <?php endif; ?>
+
     </div>
 </div>
 </div>

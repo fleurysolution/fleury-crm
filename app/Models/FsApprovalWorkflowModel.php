@@ -4,7 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class FsAsApprovalWorkflowModel extends Model
+class FsApprovalWorkflowModel extends Model
 {
     protected $table          = 'fs_as_approval_workflows';
     protected $primaryKey     = 'id';
@@ -12,9 +12,12 @@ class FsAsApprovalWorkflowModel extends Model
     protected $allowedFields  = [
         'workflow_key',
         'module_key',
+        'branch_id',
         'entity_key',
         'name',
         'description',
+        'min_amount',
+        'max_amount',
         'is_active',
         'created_by',
         'created_at',

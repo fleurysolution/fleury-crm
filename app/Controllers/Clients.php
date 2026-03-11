@@ -17,7 +17,7 @@ use App\Models\EventModel;
 use App\Models\ExpenseModel;
 
 
-class Clients extends BaseController
+class Clients extends BaseAppController
 {
     protected $clientModel;
     protected $contactModel;

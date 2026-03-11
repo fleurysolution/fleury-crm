@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\ProjectEstimateModel;
-use App\Models\EstimateItemModel;
+use App\Models\ProjectEstimateItemModel;
 use App\Models\ProjectModel;
 
 class ProjectEstimates extends BaseAppController
@@ -34,9 +34,12 @@ class ProjectEstimates extends BaseAppController
      */
     public function store(int $projectId): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
     {
-        $eModel = new ProjectEstimateModel();
-        
+        $project = (new ProjectModel())->find($projectId);
+        $eModel  = new ProjectEstimateModel();
+
         $estimateId = $eModel->insert([
+            'tenant_id'    => $project['tenant_id'],
+            'branch_id'    => $project['branch_id'],
             'project_id'   => $projectId,
             'title'        => $this->request->getPost('title'),
             'status'       => 'Draft',
@@ -61,7 +64,7 @@ class ProjectEstimates extends BaseAppController
         if (!$estimate) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
 
         $project = (new ProjectModel())->find($estimate['project_id']);
-        $items = (new EstimateItemModel())->forEstimate($id);
+        $items = (new ProjectEstimateItemModel())->forEstimate($id);
 
         return $this->render('project_estimates/show', [
             'project'  => $project,
@@ -84,7 +87,7 @@ class ProjectEstimates extends BaseAppController
         $cost = (float)$this->request->getPost('unit_cost');
         $total = $qty * $cost;
 
-        (new EstimateItemModel())->insert([
+        (new ProjectEstimateItemModel())->insert([
             'estimate_id' => $id,
             'cost_code'   => $this->request->getPost('cost_code'),
             'description' => $this->request->getPost('description'),
@@ -110,7 +113,7 @@ class ProjectEstimates extends BaseAppController
     public function deleteItem(int $id, int $itemId): \CodeIgniter\HTTP\RedirectResponse
     {
         $eModel = new ProjectEstimateModel();
-        $iModel = new EstimateItemModel();
+        $iModel = new ProjectEstimateItemModel();
 
         $estimate = $eModel->find($id);
         $item = $iModel->find($itemId);

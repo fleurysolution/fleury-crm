@@ -65,6 +65,8 @@ class SiteDiary extends BaseAppController
 
         $diaryId = $diaryModel->insert([
             'project_id'     => $projectId,
+            'tenant_id'      => session('tenant_id'),
+            'branch_id'      => session('branch_id'),
             'entry_date'     => $entryDate,
             'weather'        => $this->request->getPost('weather'),
             'temperature'    => $this->request->getPost('temperature'),
@@ -129,7 +131,28 @@ class SiteDiary extends BaseAppController
      */
     public function submit(int $projectId, int $diaryId): \CodeIgniter\HTTP\RedirectResponse
     {
-        (new SiteDiaryModel())->update($diaryId, ['status' => 'submitted']);
+        $sdModel = new SiteDiaryModel();
+        $diary = $sdModel->find($diaryId);
+        
+        if (!$diary) {
+            return redirect()->back()->with('error', 'Diary not found.');
+        }
+
+        $sdModel->update($diaryId, ['status' => 'Submitted']);
+
+        // Trigger Workflow
+        $workflow = new \App\Services\WorkflowEngine();
+        $reqId = $workflow->submitRequest('site_diaries', 'project_site_diary', $diaryId, $this->currentUser['id'], [], session('branch_id'));
+        
+        if (!$reqId) {
+            $sdModel->update($diaryId, [
+                'status'      => 'Approved',
+                'approved_by' => $this->currentUser['id'],
+                'approved_at' => date('Y-m-d H:i:s')
+            ]);
+            return redirect()->back()->with('success', 'Diary approved automatically (no workflow defined).');
+        }
+
         return redirect()->back()->with('success', 'Diary submitted for approval.');
     }
 
@@ -138,12 +161,28 @@ class SiteDiary extends BaseAppController
      */
     public function approve(int $projectId, int $diaryId): \CodeIgniter\HTTP\RedirectResponse
     {
-        (new SiteDiaryModel())->update($diaryId, [
-            'status'      => 'approved',
+        // Check if there is a pending workflow request
+        $db = \Config\Database::connect();
+        $req = $db->table('fs_approval_requests')
+                  ->where('module_key', 'site_diaries')
+                  ->where('entity_id', $diaryId)
+                  ->where('status', 'pending')
+                  ->get()->getRowArray();
+
+        if ($req) {
+            $workflow = new \App\Services\WorkflowEngine();
+            $workflow->processAction($req['id'], $this->currentUser['id'], 'approved', 'Manual approval from diary view.');
+            return redirect()->back()->with('success', 'Diary approved via workflow.');
+        }
+
+        // Fallback for direct approval if no workflow
+        $sdModel = new SiteDiaryModel();
+        $sdModel->update($diaryId, [
+            'status'      => 'Approved',
             'approved_by' => $this->currentUser['id'],
             'approved_at' => date('Y-m-d H:i:s'),
         ]);
-        return redirect()->back()->with('success', 'Diary approved.');
+        return redirect()->back()->with('success', 'Diary approved directly.');
     }
 
     /**

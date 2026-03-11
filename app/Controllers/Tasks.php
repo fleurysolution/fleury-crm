@@ -8,6 +8,8 @@ use App\Models\TaskCommentModel;
 use App\Models\TaskAttachmentModel;
 use App\Models\TaskChecklistModel;
 use App\Models\PhaseModel;
+use App\Models\TaskCollaboratorModel;
+use App\Models\ProjectModel;
 use App\Models\UserModel;
 
 class Tasks extends BaseAppController
@@ -71,7 +73,11 @@ class Tasks extends BaseAppController
     // ── CREATE (AJAX) ────────────────────────────────────────────────────
     public function store(int $projectId)
     {
+        $project = (new ProjectModel())->find($projectId);
+        
         $data = [
+            'tenant_id'   => $project['tenant_id'],
+            'branch_id'   => $project['branch_id'],
             'project_id'  => $projectId,
             'phase_id'    => $this->request->getPost('phase_id') ?: null,
             'milestone_id'=> $this->request->getPost('milestone_id') ?: null,
@@ -181,10 +187,13 @@ class Tasks extends BaseAppController
         $body = trim($this->request->getPost('body') ?? '');
         if (!$body && !$this->request->getFile('attachment')) return $this->response->setJSON(['success' => false]);
         
+        $task = $this->tasks->find($taskId);
         $data = [
-            'task_id' => $taskId,
-            'user_id' => session()->get('user_id'),
-            'body'    => $body,
+            'tenant_id' => $task['tenant_id'],
+            'branch_id' => $task['branch_id'],
+            'task_id'   => $taskId,
+            'user_id'   => session()->get('user_id'),
+            'body'      => $body,
         ];
 
         $file = $this->request->getFile('attachment');
@@ -212,6 +221,7 @@ class Tasks extends BaseAppController
             return $this->response->setJSON(['success' => false, 'message' => 'No files uploaded.']);
         }
 
+        $task = $this->tasks->find($taskId);
         $dir  = FCPATH . 'uploads/tasks/' . $taskId . '/';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
@@ -224,6 +234,8 @@ class Tasks extends BaseAppController
                 $file->move($dir, $name);
                 
                 $id = $this->attachments->insert([
+                    'tenant_id' => $task['tenant_id'],
+                    'branch_id' => $task['branch_id'],
                     'task_id'   => $taskId,
                     'user_id'   => session()->get('user_id'),
                     'filename'  => $file->getClientName(),
@@ -251,7 +263,13 @@ class Tasks extends BaseAppController
         if ($action === 'add') {
             $text = trim($this->request->getPost('text') ?? '');
             if (!$text) return $this->response->setJSON(['success' => false]);
-            $id = $this->checklists->insert(['task_id' => $taskId, 'item_text' => $text]);
+            $task = $this->tasks->find($taskId);
+            $id = $this->checklists->insert([
+                'tenant_id' => $task['tenant_id'],
+                'branch_id' => $task['branch_id'],
+                'task_id'   => $taskId, 
+                'item_text' => $text
+            ]);
             return $this->response->setJSON(['success' => true, 'item' => $this->checklists->find($id)]);
         }
 

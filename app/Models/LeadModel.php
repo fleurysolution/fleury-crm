@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class LeadModel extends Model
+class LeadModel extends ErpModel
 {
     protected $table          = 'leads';
     protected $primaryKey     = 'id';
@@ -12,6 +10,8 @@ class LeadModel extends Model
     protected $useSoftDeletes = true;
 
     protected $allowedFields  = [
+        'tenant_id',
+        'branch_id',
         'title',
         'type',
         'company_name',

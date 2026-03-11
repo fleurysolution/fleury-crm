@@ -52,7 +52,7 @@
     </div>
 
     <!-- Status + Priority -->
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label class="form-label fw-semibold">Status</label>
         <select name="status" class="form-select">
             <option value="draft" <?= old('status','draft')==='draft'?'selected':'' ?>>Draft</option>
@@ -60,7 +60,16 @@
             <option value="on_hold" <?= old('status')==='on_hold'?'selected':'' ?>>On Hold</option>
         </select>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Project Stage</label>
+        <select name="project_stage" class="form-select">
+            <option value="bidding" <?= old('project_stage')==='bidding'?'selected':'' ?>>Bidding</option>
+            <option value="pre_construction" <?= old('project_stage','pre_construction')==='pre_construction'?'selected':'' ?>>Pre-Construction</option>
+            <option value="active" <?= old('project_stage')==='active'?'selected':'' ?>>Active</option>
+            <option value="closeout" <?= old('project_stage')==='closeout'?'selected':'' ?>>Closeout</option>
+        </select>
+    </div>
+    <div class="col-md-3">
         <label class="form-label fw-semibold">Priority</label>
         <select name="priority" class="form-select">
             <option value="low">Low</option>
@@ -69,7 +78,7 @@
             <option value="urgent">Urgent</option>
         </select>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label class="form-label fw-semibold">Currency</label>
         <select name="currency" class="form-select">
             <option value="USD">USD</option>
@@ -81,6 +90,26 @@
         </select>
     </div>
 
+    <!-- Contract + Commercial -->
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Contract Type</label>
+        <select name="contract_type" class="form-select">
+            <option value="lump_sum" <?= old('contract_type')==='lump_sum'?'selected':'' ?>>Lump Sum / Fixed Price</option>
+            <option value="cost_plus" <?= old('contract_type')==='cost_plus'?'selected':'' ?>>Cost Plus</option>
+            <option value="unit_price" <?= old('contract_type')==='unit_price'?'selected':'' ?>>Unit Price</option>
+            <option value="time_materials" <?= old('contract_type')==='time_materials'?'selected':'' ?>>Time & Materials</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Original Budget Baseline</label>
+        <input type="number" name="versioned_budget_baseline" class="form-control" placeholder="0.00" min="0" step="0.01" value="<?= old('versioned_budget_baseline') ?>">
+        <small class="text-muted">Will be locked after approval.</small>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Current/Forecast Budget</label>
+        <input type="number" name="budget" class="form-control" placeholder="0.00" min="0" step="0.01" value="<?= old('budget') ?>">
+    </div>
+
     <!-- Dates + Budget -->
     <div class="col-md-4">
         <label class="form-label fw-semibold">Start Date</label>
@@ -90,10 +119,7 @@
         <label class="form-label fw-semibold">End Date</label>
         <input type="date" name="end_date" class="form-control" value="<?= old('end_date') ?>">
     </div>
-    <div class="col-md-4">
-        <label class="form-label fw-semibold">Budget</label>
-        <input type="number" name="budget" class="form-control" placeholder="0.00" min="0" step="0.01" value="<?= old('budget') ?>">
-    </div>
+
 
     <!-- Color label -->
     <div class="col-md-3">

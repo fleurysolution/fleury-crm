@@ -11,15 +11,13 @@ class Users extends BaseAppController
      */
     public function index(): string
     {
-        $db    = \Config\Database::connect();
-        $users = $db->query(
-            'SELECT u.id, CONCAT(u.first_name, " ", u.last_name) AS name, u.email, u.phone, u.status, u.last_login_at AS last_login,
-                    (SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id = r.id WHERE ur.user_id = u.id LIMIT 1) AS role_name
-             FROM fs_users u
-             WHERE u.deleted_at IS NULL
-             ORDER BY u.first_name ASC, u.last_name ASC'
-        )->getResultArray();
-
+        // Using the model ensures ErpModel's applyAbacScope (tenant isolation) is applied
+        $users = $this->usersModel
+            ->select('fs_users.*, roles.name as role_name')
+            ->join('user_roles', 'user_roles.user_id = fs_users.id', 'left')
+            ->join('roles', 'roles.id = user_roles.role_id', 'left')
+            ->orderBy('fs_users.first_name', 'ASC')
+            ->findAll();
 
         return $this->render('users/index', ['users' => $users]);
     }
@@ -33,8 +31,17 @@ class Users extends BaseAppController
             ->table('roles')->get()->getResultArray();
         $clients = \Config\Database::connect()
             ->table('clients')->select('id, company_name')->where('deleted_at IS NULL')->get()->getResultArray();
+        $branches = \Config\Database::connect()->table('branches')->get()->getResultArray();
+        $departments = \Config\Database::connect()->table('departments')->get()->getResultArray();
+        $managers = \Config\Database::connect()->table('fs_users')->select('id, first_name, last_name')->where('status', 'active')->where('deleted_at IS NULL')->get()->getResultArray();
 
-        return $this->render('users/create', ['roles' => $roles, 'clients' => $clients]);
+        return $this->render('users/create', [
+            'roles' => $roles, 
+            'clients' => $clients,
+            'branches' => $branches,
+            'departments' => $departments,
+            'managers' => $managers
+        ]);
     }
 
     /**
@@ -60,6 +67,14 @@ class Users extends BaseAppController
             'phone'      => $this->request->getPost('phone'),
             'status'     => $this->request->getPost('status') ?: 'active',
             'client_id'  => $this->request->getPost('client_id') ?: null,
+            'branch_id' => $this->request->getPost('branch_id') ?: null,
+            'department_id' => $this->request->getPost('department_id') ?: null,
+            'reporting_manager_id' => $this->request->getPost('reporting_manager_id') ?: null,
+            'approval_authority_level' => $this->request->getPost('approval_authority_level') ?: 0,
+            'geo_access_permission' => $this->request->getPost('geo_access_permission') ?: null,
+            'payroll_profile_id' => $this->request->getPost('payroll_profile_id') ?: null,
+            'tax_profile_id' => $this->request->getPost('tax_profile_id') ?: null,
+            'employment_type' => $this->request->getPost('employment_type') ?: null,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
@@ -99,7 +114,21 @@ class Users extends BaseAppController
 
         $roles = $db->table('roles')->get()->getResultArray();
         $clients = $db->table('clients')->select('id, company_name')->where('deleted_at IS NULL')->get()->getResultArray();
-        return $this->render('users/show', ['user' => $user, 'roles' => $roles, 'clients' => $clients]);
+        $branches = clone $db;
+        $branches = $db->table('branches')->get()->getResultArray();
+        $departments = clone $db;
+        $departments = $db->table('departments')->get()->getResultArray();
+        $managers = clone $db;
+        $managers = $db->table('fs_users')->select('id, first_name, last_name')->where('status', 'active')->where('id !=', $id)->where('deleted_at IS NULL')->get()->getResultArray();
+
+        return $this->render('users/show', [
+            'user' => $user, 
+            'roles' => $roles, 
+            'clients' => $clients,
+            'branches' => $branches,
+            'departments' => $departments,
+            'managers' => $managers
+        ]);
     }
 
     /**
@@ -115,6 +144,14 @@ class Users extends BaseAppController
             'phone'      => $this->request->getPost('phone'),
             'status'     => $this->request->getPost('status') ?: 'active',
             'client_id'  => $this->request->getPost('client_id') ?: null,
+            'branch_id' => $this->request->getPost('branch_id') ?: null,
+            'department_id' => $this->request->getPost('department_id') ?: null,
+            'reporting_manager_id' => $this->request->getPost('reporting_manager_id') ?: null,
+            'approval_authority_level' => $this->request->getPost('approval_authority_level') ?: 0,
+            'geo_access_permission' => $this->request->getPost('geo_access_permission') ?: null,
+            'payroll_profile_id' => $this->request->getPost('payroll_profile_id') ?: null,
+            'tax_profile_id' => $this->request->getPost('tax_profile_id') ?: null,
+            'employment_type' => $this->request->getPost('employment_type') ?: null,
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 

@@ -41,6 +41,8 @@ class PunchList extends BaseAppController
     {
         $plModel = new PunchListItemModel();
         $data = [
+            'tenant_id'   => session('tenant_id'),
+            'branch_id'   => session('branch_id'),
             'project_id'  => $projectId,
             'item_number' => $plModel->nextNumber($projectId),
             'title'       => $this->request->getPost('title'),

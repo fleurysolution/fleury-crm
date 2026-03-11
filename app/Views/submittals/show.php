@@ -18,7 +18,7 @@ $badge = ['draft'=>'secondary','submitted'=>'info','under_review'=>'warning','ap
         </h4>
         <div class="d-flex align-items-center gap-2 mt-2">
             <span class="badge bg-<?= $badge ?>-subtle text-<?= $badge ?> fs-6"><?= ucwords(str_replace('_',' ',$submittal['status'])) ?></span>
-            <span class="badge bg-light text-dark border">Rev <?= $submittal['current_revision'] ?></span>
+            <span class="badge bg-light text-dark border">Rev <?= $submittal['revision'] ?></span>
             <?php if ($submittal['type']): ?>
                 <span class="badge bg-light text-dark border"><i class="fa-solid fa-tag me-1"></i> <?= ucwords(str_replace('_',' ',$submittal['type'])) ?></span>
             <?php endif; ?>
@@ -59,7 +59,7 @@ $badge = ['draft'=>'secondary','submitted'=>'info','under_review'=>'warning','ap
                     <div class="col-sm-6 col-md-4">
                         <div class="text-muted small fw-semibold">Submitter</div>
                         <div class="fw-medium">
-                            <?= esc($submittal['user_name'] ?? 'Unknown User') ?>
+                            <?= esc($submittal['submitter_name'] ?? 'Unknown User') ?>
                         </div>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ $badge = ['draft'=>'secondary','submitted'=>'info','under_review'=>'warning','ap
                         <label class="form-label small fw-semibold text-primary"><i class="fa-solid fa-share me-1"></i> Forward For Additional Review (Optional)</label>
                         <select id="forwardTo" class="form-select">
                             <option value="">-- No, close review process --</option>
-                            <?php foreach($members??[] as $m): if ($m['user_id'] == $submittal['reviewer_id']) continue; ?>
+                            <?php foreach($members??[] as $m): if ($m['user_id'] == $submittal['assigned_to']) continue; ?>
                                 <option value="<?= $m['user_id'] ?>"><?= esc($m['name']) ?> (<?= esc($m['role']??'') ?>)</option>
                             <?php endforeach; ?>
                         </select>

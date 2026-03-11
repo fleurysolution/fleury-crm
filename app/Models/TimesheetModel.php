@@ -4,14 +4,15 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class TimesheetModel extends Model
+class TimesheetModel extends ErpModel
 {
     protected $table         = 'timesheets';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
     protected $allowedFields = [
-        'user_id','week_start','status','notes',
+        'tenant_id', 'branch_id', 'user_id','week_start','status','notes',
         'submitted_at','approved_by','approved_at','rejected_reason',
+        'payroll_status','pay_run_id'
     ];
 
     /**

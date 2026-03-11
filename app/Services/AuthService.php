@@ -54,12 +54,23 @@ class AuthService
         $roleSlugs = array_column($roles, 'slug');
 
         session()->set([
-            'user_id'      => (int) $user['id'],
-            'user_email'   => $user['email'],
-            'user_name'    => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
-            'user_roles'   => $roleSlugs,
-            'user_permissions' => $permissionSlugs,
-            'is_logged_in' => true,
+            'user_id'                  => (int) $user['id'],
+            'user_email'               => $user['email'],
+            'user_name'                => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
+            'user_roles'               => $roleSlugs,
+            'user_permissions'         => $permissionSlugs,
+            'is_logged_in'             => true,
+            
+            // Full ABAC context
+            'tenant_id'                => $user['tenant_id'] ?? null,
+            'branch_id'                => $user['branch_id'] ?? null,
+            'department_id'            => $user['department_id'] ?? null,
+            'reporting_manager_id'     => $user['reporting_manager_id'] ?? null,
+            'approval_authority_level' => $user['approval_authority_level'] ?? 0,
+            'geo_access_permission'    => $user['geo_access_permission'] ?? null,
+            'payroll_profile_id'       => $user['payroll_profile_id'] ?? null,
+            'tax_profile_id'           => $user['tax_profile_id'] ?? null,
+            'employment_type'          => $user['employment_type'] ?? null,
         ]);
 
         $this->users->update((int)$user['id'], ['last_login_at' => date('Y-m-d H:i:s')]);

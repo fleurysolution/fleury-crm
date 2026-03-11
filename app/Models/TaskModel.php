@@ -2,16 +2,14 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class TaskModel extends Model
+class TaskModel extends ErpModel
 {
     protected $table          = 'tasks';
     protected $primaryKey     = 'id';
     protected $useSoftDeletes = true;
     protected $useTimestamps  = true;
     protected $allowedFields  = [
-        'project_id', 'phase_id', 'parent_task_id', 'milestone_id',
+        'tenant_id', 'branch_id', 'project_id', 'phase_id', 'parent_task_id', 'milestone_id',
         'area_id', 'cost_code_id', 'title', 'description',
         'assigned_to', 'status', 'priority',
         'start_date', 'start_time', 'due_date', 'end_time', 

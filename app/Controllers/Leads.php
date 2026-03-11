@@ -5,7 +5,7 @@ namespace App\Controllers;
 use App\Models\LeadModel;
 use App\Models\FsUserModel;
 
-class Leads extends BaseController
+class Leads extends BaseAppController
 {
     protected $leadModel;
     protected $userModel;
@@ -147,6 +147,8 @@ class Leads extends BaseController
         // Check if already exists/converted? (Optional check)
 
         $clientId = $clientModel->insert([
+            'tenant_id'       => session()->get('tenant_id'),
+            'branch_id'       => session()->get('branch_id'),
             'type'            => $lead['type'],
             'company_name'    => $lead['company_name'],
             'website'         => $lead['website'],

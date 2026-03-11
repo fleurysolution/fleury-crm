@@ -193,9 +193,6 @@ class Timesheets extends BaseAppController
         ]);
     }
 
-    /**
-     * POST /timesheets/:id/submit — Submit for approval
-     */
     public function submit(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $tsModel = new TimesheetModel();
@@ -203,6 +200,23 @@ class Timesheets extends BaseAppController
         if (!$ts || $ts['user_id'] !== $this->currentUser['id']) {
             return redirect()->back()->with('error', 'Not authorised.');
         }
+
+        $totalHours = $tsModel->totalHours($id);
+        
+        $workflow = new \App\Services\WorkflowEngine();
+        $reqId = $workflow->submitRequest('timesheets', 'timesheet', $id, $this->currentUser['id'], [], session('branch_id'), (float)$totalHours);
+
+        if (!$reqId) {
+            // Auto-approve if no workflow
+            $tsModel->update($id, [
+                'status' => 'approved',
+                'approved_by' => $this->currentUser['id'],
+                'approved_at' => date('Y-m-d H:i:s'),
+                'submitted_at' => date('Y-m-d H:i:s')
+            ]);
+            return redirect()->to(site_url("timesheets/{$id}"))->with('success', 'Timesheet automatically approved.');
+        }
+
         $tsModel->update($id, ['status' => 'submitted', 'submitted_at' => date('Y-m-d H:i:s')]);
         return redirect()->to(site_url("timesheets/{$id}"))->with('success', 'Timesheet submitted for approval.');
     }
@@ -263,5 +277,38 @@ class Timesheets extends BaseAppController
         }
         fclose($out);
         exit;
+    }
+    public function validateLocation(): \CodeIgniter\HTTP\Response
+    {
+        $projectId = $this->request->getPost('project_id');
+        $userLat   = (float)$this->request->getPost('lat');
+        $userLng   = (float)$this->request->getPost('lng');
+
+        $project = (new ProjectModel())->find($projectId);
+        if (!$project || !$project['latitude'] || !$project['longitude']) {
+            return $this->response->setJSON(['success' => true, 'message' => 'No geofence set.']);
+        }
+
+        $distance = $this->calculateDistance($userLat, $userLng, (float)$project['latitude'], (float)$project['longitude']);
+        $isWithin = $distance <= (int)$project['geofence_radius'];
+
+        return $this->response->setJSON([
+            'success'   => $isWithin,
+            'distance'  => round($distance, 2),
+            'radius'    => $project['geofence_radius'],
+            'message'   => $isWithin ? 'You are on site.' : 'You must be on site to log time. Distance: ' . round($distance, 2) . 'm'
+        ]);
+    }
+
+    protected function calculateDistance($lat1, $lon1, $lat2, $lon2): float
+    {
+        $earthRadius = 6371000; // Meters
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return $earthRadius * $c;
     }
 }

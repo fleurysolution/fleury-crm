@@ -13,6 +13,34 @@ $routes->get('auth/signin', 'Auth::signin');
 $routes->post('auth/signin', 'Auth::attemptSignin');
 $routes->post('auth/signout', 'Auth::signout');
 
+// Public Signup
+$routes->get('signup', 'Signup::index');
+$routes->get('signup/account/(:num)', 'Signup::account/$1');
+$routes->get('signup/company', 'Signup::company');
+$routes->post('signup/company', 'Signup::company');
+$routes->get('signup/success', 'Signup::success');
+$routes->post('signup/submit', 'Signup::submit');
+
+// Stripe Webhooks
+$routes->post('webhooks/stripe', 'Webhooks\Stripe::index');
+// Platform Management (Super Admin)
+$routes->get('tenants', 'Tenants::index', ['filter' => 'auth']);
+$routes->group('subscriptions', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/', 'Subscriptions::index');
+    $routes->get('create', 'Subscriptions::create');
+    $routes->post('store', 'Subscriptions::store');
+    $routes->get('current', 'Subscriptions::current');
+    $routes->post('cancel', 'Subscriptions::cancel');
+    $routes->get('upgrade', 'Subscriptions::upgrade');
+    $routes->get('renew', 'Subscriptions::renew');
+    $routes->get('checkout/(:num)', 'Subscriptions::checkout/$1');
+    $routes->get('success', 'Subscriptions::success');
+});
+
+// Subscription Access Control
+$routes->get('subscription/locked', 'Subscription::locked');
+$routes->get('subscription/renew', 'Subscriptions::renew', ['filter' => 'auth']);
+
 // Vendor Portal Routes
 $routes->group('vendor-portal', ['filter' => 'auth'], function ($routes) {
     $routes->get('dashboard', 'VendorPortal::dashboard');
@@ -33,10 +61,10 @@ $routes->post('auth/password/forgot', 'Auth::sendResetLink');
 $routes->get('auth/password/reset/(:segment)', 'Auth::resetPassword/$1');
 $routes->post('auth/password/reset', 'Auth::doResetPassword');
 
-$routes->get('approval/requests', 'Approval::index');
-$routes->get('approval/requests/(:num)', 'Approval::view/$1');
-$routes->post('approval/requests/(:num)/approve', 'Approval::approve/$1');
-$routes->post('approval/requests/(:num)/reject', 'Approval::reject/$1');
+// $routes->get('approval/requests', 'Approval::index');
+// $routes->get('approval/requests/(:num)', 'Approval::view/$1');
+// $routes->post('approval/requests/(:num)/approve', 'Approval::approve/$1');
+// $routes->post('approval/requests/(:num)/reject', 'Approval::reject/$1');
 $routes->get('locale/(:segment)', 'Locale::set/$1');
 
 // Team Management
@@ -163,6 +191,27 @@ $routes->group('settings', ['filter' => 'permission:manage_settings'], function 
     $routes->get('cron_job',                         'Settings::cron_job');
     $routes->get('db_backup',                        'Settings::db_backup');
 
+    $routes->get('stripe-platform',                  'Settings::stripe_platform');
+    $routes->post('save_platform_stripe',            'Settings::save_platform_stripe');
+
+    $routes->group('custom-fields', function ($routes) {
+        $routes->get('/', 'CustomFields::index');
+        $routes->post('store', 'CustomFields::store');
+        $routes->post('delete/(:num)', 'CustomFields::delete/$1');
+    });
+
+    $routes->group('automations', function ($routes) {
+        $routes->get('/', 'Automations::index');
+        $routes->post('store', 'Automations::store');
+        $routes->get('toggle/(:num)', 'Automations::toggle/$1');
+    });
+
+    $routes->group('custom-hub', function ($routes) {
+        $routes->get('/', 'CustomHub::index');
+        $routes->post('store', 'CustomHub::store');
+        $routes->post('delete/(:num)', 'CustomHub::delete/$1');
+    });
+
     // Legacy generic save
     $routes->post('save',                            'Settings::save');
 
@@ -181,6 +230,50 @@ $routes->group('settings', ['filter' => 'permission:manage_settings'], function 
     $routes->post('branches/divisions/delete/(:num)',       'BranchSettings::deleteDivision/$1');
     $routes->get('branches/divisions/get/(:num)',           'BranchSettings::getDivision/$1');
     $routes->get('branches/divisions/by-office/(:num)',     'BranchSettings::divisionsByOffice/$1');
+});
+
+// ── Custom Data Hub ──────────────────────────────────────────────────────────
+$routes->get('hub/(:any)', 'CustomHub::viewData/$1', ['filter' => 'auth']);
+$routes->post('hub/(:any)/save', 'CustomHub::saveData/$1', ['filter' => 'auth']);
+
+// ── Workflow Approvals ──────────────────────────────────────────────────────
+$routes->group('approvals', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/', 'Approvals::index');
+    $routes->post('(:num)/action', 'Approvals::processAction/$1');
+});
+
+// ── Change Management ────────────────────────────────────────────────────────
+$routes->group('change-orders', ['filter' => 'auth'], function ($routes) {
+    $routes->post('events/store/(:num)', 'ChangeOrders::storeEvent/$1');
+    $routes->get('convert/(:num)',       'ChangeOrders::convertToCO/$1');
+    $routes->post('approve/(:num)',      'ChangeOrders::approveCO/$1');
+});
+
+// ── Meeting Minutes ──────────────────────────────────────────────────────────
+$routes->group('meetings', ['filter' => 'auth'], function ($routes) {
+    $routes->post('store/(:num)', 'Meetings::store/$1');
+    $routes->post('update-minutes/(:num)', 'Meetings::updateMinutes/$1');
+    $routes->post('update-attendee/(:num)', 'Meetings::updateAttendee/$1');
+});
+
+// ── Bidding Portal ───────────────────────────────────────────────────────────
+$routes->group('bidding', ['filter' => 'auth'], function ($routes) {
+    $routes->post('storePackage/(:num)', 'Bidding::storePackage/$1');
+    $routes->post('submitBid/(:num)',    'Bidding::submitBid/$1');
+    $routes->get('award/(:num)',         'Bidding::award/$1');
+});
+
+// ── Budget Line-Items ────────────────────────────────────────────────────────
+$routes->group('budget-items', ['filter' => 'auth'], function ($routes) {
+    $routes->post('store/(:num)', 'BudgetItems::store/$1');
+    $routes->post('delete/(:num)', 'BudgetItems::delete/$1');
+});
+
+// ── Drawing Management ───────────────────────────────────────────────────────
+$routes->group('drawings', ['filter' => 'auth'], function ($routes) {
+    $routes->post('store/(:num)', 'Drawings::store/$1');
+    $routes->get('view/(:num)',  'Drawings::view/$1');
+    $routes->post('addPin/(:num)', 'Drawings::addPin/$1');
 });
 
 // ── Projects, Tasks, Areas ─────────────────────────────────────────────────
@@ -237,9 +330,11 @@ $routes->group('timesheets', ['filter' => 'auth'], function ($routes) {
     $routes->post('(:num)/approve',     'Timesheets::approve/$1');
     $routes->post('(:num)/reject',      'Timesheets::reject/$1');
     $routes->get('(:num)/export',       'Timesheets::export/$1');
+    $routes->post('validate-location',  'Timesheets::validateLocation');
 });
 
 // ── RFIs ─────────────────────────────────────────────────────────────────────
+$routes->get('rfis',                            'RFIs::globalIndex',      ['filter' => 'auth']);
 $routes->post('projects/(:num)/rfis',          'RFIs::store/$1',         ['filter' => 'auth']);
 $routes->get('rfis/(:num)',                     'RFIs::show/$1',          ['filter' => 'auth']);
 $routes->post('rfis/(:num)/respond',            'RFIs::respond/$1',       ['filter' => 'auth']);
@@ -288,9 +383,16 @@ $routes->get('projects/(:num)/site-diary',                'SiteDiary::index/$1',
 $routes->get('projects/(:num)/site-diary/create',         'SiteDiary::create/$1',       ['filter' => 'auth']);
 $routes->post('projects/(:num)/site-diary',               'SiteDiary::store/$1',        ['filter' => 'auth']);
 $routes->get('projects/(:num)/site-diary/(:num)',          'SiteDiary::show/$1/$2',      ['filter' => 'auth']);
-    $routes->post('projects/(:num)/site-diary/(:num)/update',  'SiteDiary::update/$1/$2',    ['filter' => 'auth']);
-    $routes->post('projects/(:num)/site-diary/(:num)/submit',  'SiteDiary::submit/$1/$2',    ['filter' => 'auth']);
-    $routes->post('projects/(:num)/site-diary/(:num)/approve', 'SiteDiary::approve/$1/$2',   ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary/(:num)/update',  'SiteDiary::update/$1/$2',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary/(:num)/submit',  'SiteDiary::submit/$1/$2',    ['filter' => 'auth']);
+$routes->post('projects/(:num)/site-diary/(:num)/approve', 'SiteDiary::approve/$1/$2',   ['filter' => 'auth']);
+
+// ── Daily Construction Logs ──────────────────────────────────────────────────
+$routes->get('projects/(:num)/daily-logs',                'DailyLogs::index/$1',        ['filter' => 'auth']);
+$routes->post('projects/(:num)/daily-logs',               'DailyLogs::store/$1',        ['filter' => 'auth']);
+$routes->get('daily-logs/(:num)',                         'DailyLogs::show/$1',         ['filter' => 'auth']);
+$routes->post('daily-logs/(:num)/manpower',               'DailyLogs::addManpower/$1',  ['filter' => 'auth']);
+$routes->post('daily-logs/(:num)/equipment',              'DailyLogs::addEquipment/$1', ['filter' => 'auth']);
 
 // ── Contracts ─────────────────────────────────────────────────────────────────
 $routes->post('projects/(:num)/contracts',      'Contracts::store/$1',        ['filter' => 'auth']);
@@ -324,7 +426,7 @@ $routes->post('finance/certs/(:num)/mark-paid',        'Finance::markCertPaid/$1
 $routes->post('projects/(:num)/finance/invoices',      'Finance::storeInvoice/$1',    ['filter' => 'auth']);
 $routes->post('finance/invoices/(:num)/mark-paid',     'Finance::markInvoicePaid/$1', ['filter' => 'auth']);
 $routes->post('projects/(:num)/finance/expenses',      'Finance::storeExpense/$1',    ['filter' => 'auth']);
-$routes->post('finance/expenses/(:num)/approve',       'Finance::approveExpense/$1',  ['filter' => 'auth']);
+$routes->post('finance/expenses/(:num)/delete',     'Finance::deleteExpense/$1',   ['filter' => 'auth']);
 
 // ── Field Management (Punch & Diaries) ───────────────────────────────────────
 $routes->post('projects/(:num)/punch',                 'FieldManagement::storePunchList/$1',   ['filter' => 'auth']);
@@ -335,14 +437,44 @@ $routes->post('projects/(:num)/diaries',               'FieldManagement::createD
 $routes->get('field/diary/(:num)',                     'FieldManagement::showDiary/$1',        ['filter' => 'auth']);
 $routes->post('field/diary/(:num)/save',               'FieldManagement::saveDiaryItems/$1',   ['filter' => 'auth']);
 
+// ── QHSE (Inspections & Safety) ──────────────────────────────────────────────
+$routes->get('projects/(:num)/inspections',           'Inspections::index/$1',       ['filter' => 'auth']);
+$routes->get('projects/(:num)/inspections/(:num)',    'Inspections::show/$1/$2',     ['filter' => 'auth']);
+$routes->post('projects/(:num)/inspections',          'Inspections::store/$1',       ['filter' => 'auth']);
+$routes->post('projects/(:num)/inspections/(:num)/delete', 'Inspections::delete/$1/$2', ['filter' => 'auth']);
+
+$routes->get('projects/(:num)/safety',                 'SafetyIncidents::index/$1',   ['filter' => 'auth']);
+$routes->post('projects/(:num)/safety',                'SafetyIncidents::store/$1',   ['filter' => 'auth']);
+$routes->post('projects/(:num)/safety/(:num)/status',  'SafetyIncidents::updateStatus/$1/$2', ['filter' => 'auth']);
+$routes->post('projects/(:num)/safety/(:num)/delete',  'SafetyIncidents::delete/$1/$2', ['filter' => 'auth']);
+
 // ── Procurement & Purchase Orders ────────────────────────────────────────────
 $routes->post('projects/(:num)/procurement/pos',       'Procurement::createPo/$1',     ['filter' => 'auth']);
 $routes->get('procurement/pos/(:num)',                 'Procurement::showPo/$1',       ['filter' => 'auth']);
 $routes->post('procurement/pos/(:num)/items',          'Procurement::savePoItems/$1',  ['filter' => 'auth']);
 $routes->get('procurement/pos/(:num)/pdf',             'Procurement::exportPoPdf/$1',  ['filter' => 'auth']);
 
+// ── Inventory & Asset Management ─────────────────────────────────────────────
+$routes->get('assets',                         'Assets::index',               ['filter' => 'auth']);
+$routes->post('assets',                        'Assets::store',               ['filter' => 'auth']);
+$routes->post('assets/(:num)/assign',          'Assets::assign/$1',           ['filter' => 'auth']);
+$routes->post('assets/(:num)/maintenance',     'Assets::maintenance/$1',      ['filter' => 'auth']);
+
+$routes->get('inventory',                      'Inventory::index',            ['filter' => 'auth']);
+$routes->post('inventory/items',               'Inventory::storeItem',        ['filter' => 'auth']);
+$routes->post('inventory/locations',           'Inventory::storeLocation',    ['filter' => 'auth']);
+$routes->post('inventory/transactions',        'Inventory::processTransaction',['filter' => 'auth']);
+
+// ── Workforce & Payroll ──────────────────────────────────────────────────────
+$routes->get('payroll',                        'Payroll::index',              ['filter' => 'auth']);
+$routes->post('payroll/profiles',              'Payroll::storeProfile',       ['filter' => 'auth']);
+$routes->post('payroll/tax-profiles',          'Payroll::storeTaxProfile',    ['filter' => 'auth']);
+$routes->post('payroll/runs/generate',         'Payroll::generateRun',        ['filter' => 'auth']);
+$routes->post('payroll/runs/(:num)/approve',   'Payroll::approveRun/$1',      ['filter' => 'auth']);
+
 // ── Reports & Dashboard ──────────────────────────────────────────────────────
 $routes->get('reports',                               'Reports::index',              ['filter' => 'auth']);
+$routes->get('reports/financial/pnl',                 'FinancialReports::pnl',       ['filter' => 'auth']);
 $routes->get('reports/json',                          'Reports::executiveJson',      ['filter' => 'auth']);
 $routes->get('projects/(:num)/report',                'Reports::project/$1',         ['filter' => 'auth']);
 $routes->get('projects/(:num)/report/json',           'Reports::projectJson/$1',     ['filter' => 'auth']);
@@ -368,6 +500,19 @@ $routes->post('users/(:num)/update',          'Users::update/$1',       ['filter
 $routes->post('users/(:num)/password',        'Users::changePassword/$1', ['filter' => 'auth']);
 $routes->post('users/(:num)/toggle-status',   'Users::toggleStatus/$1', ['filter' => 'auth']);
 $routes->post('users/(:num)/delete',          'Users::delete/$1',       ['filter' => 'auth']);
+
+// ── Branch & Department Management ─────────────────────────────────────────
+$routes->group('branches', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/', 'Branches::index');
+    $routes->post('create', 'Branches::create');
+    $routes->get('delete/(:num)', 'Branches::delete/$1');
+});
+
+$routes->group('departments', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/', 'Departments::index');
+    $routes->post('create', 'Departments::create');
+    $routes->get('delete/(:num)', 'Departments::delete/$1');
+});
 
 // ── Vendor Applications (Internal) ─────────────────────────────────────────
 $routes->get('vendor-applications',                 'VendorApplications::index',    ['filter' => 'auth']);

@@ -8,15 +8,16 @@ use App\Models\EstimateItemModel;
 use App\Models\ClientModel;
 use App\Models\TaxModel;
 
-class Estimates extends BaseController
+class Estimates extends BaseAppController
 {
     protected $estimateModel;
     protected $estimateItemModel;
     protected $clientModel;
     protected $taxModel;
 
-    public function __construct()
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
     {
+        parent::initController($request, $response, $logger);
         $this->estimateModel = new EstimateModel();
         $this->estimateItemModel = new EstimateItemModel();
         $this->clientModel = new ClientModel();
@@ -192,6 +193,25 @@ class Estimates extends BaseController
         $status = $this->request->getPost('status');
         if (in_array($status, ['draft', 'sent', 'accepted', 'declined'])) {
             $this->estimateModel->update($id, ['status' => $status]);
+            
+            if ($status === 'sent') {
+                // Trigger Workflow for internal approval before sending to client?
+                // Or just track it. Let's assume 'sent' implies it's gone through internal check.
+                // In ERP, usually 'Approved' comes before 'Sent'.
+                $items = $this->estimateItemModel->where('estimate_id', $id)->findAll();
+                $totalVal = array_sum(array_column($items, 'total'));
+
+                $workflow = new \App\Services\WorkflowEngine();
+                $reqId = $workflow->submitRequest('estimates', 'estimate', $id, $this->currentUser['id'], [], session('branch_id'), (float)$totalVal);
+                
+                if (!$reqId) {
+                    $this->estimateModel->update($id, ['status' => 'sent']); // Already sent or auto-approved
+                } else {
+                    $this->estimateModel->update($id, ['status' => 'pending_approval']);
+                    return redirect()->back()->with('success', 'Estimate submitted for internal approval.');
+                }
+            }
+
             return redirect()->back()->with('success', 'Status updated to ' . ucfirst($status) . '.');
         }
         return redirect()->back()->with('error', 'Invalid status.');
@@ -207,10 +227,56 @@ class Estimates extends BaseController
         return redirect()->back()->with('success', 'Estimate sent to client successfully.');
     }
 
-    /**
-     * GET /estimates/:id/pdf
-     * View or Download a print-ready version of the estimate.
-     */
+    public function edit($id)
+    {
+        $estimate = $this->estimateModel->find($id);
+        if (!$estimate) return redirect()->to(site_url('estimates'))->with('error', 'Estimate not found.');
+
+        return view('estimates/form', [
+            'title' => 'Edit Estimate #' . $id,
+            'estimate' => $estimate,
+            'clients' => $this->clientModel->where('status', 'active')->findAll(),
+            'taxes' => $this->taxModel->findAll(),
+            'items' => $this->estimateItemModel->where('estimate_id', $id)->findAll()
+        ]);
+    }
+
+    public function addItem($id)
+    {
+        $estimate = $this->estimateModel->find($id);
+        if (!$estimate) return redirect()->back()->with('error', 'Estimate not found.');
+
+        $qty = (float)$this->request->getPost('quantity');
+        $rate = (float)$this->request->getPost('rate');
+        
+        $this->estimateItemModel->insert([
+            'estimate_id' => $id,
+            'title' => $this->request->getPost('title'),
+            'description' => $this->request->getPost('description'),
+            'quantity' => $qty,
+            'rate' => $rate,
+            'total' => $qty * $rate
+        ]);
+
+        return redirect()->back()->with('success', 'Item added.');
+    }
+
+    public function deleteItem($id, $itemId)
+    {
+        $item = $this->estimateItemModel->find($itemId);
+        if ($item && $item['estimate_id'] == $id) {
+            $this->estimateItemModel->delete($itemId);
+            return redirect()->back()->with('success', 'Item deleted.');
+        }
+        return redirect()->back()->with('error', 'Item not found.');
+    }
+
+    public function delete($id)
+    {
+        $this->estimateModel->delete($id);
+        return redirect()->to(site_url('estimates'))->with('success', 'Estimate deleted.');
+    }
+
     public function pdf($id)
     {
         $estimate = $this->estimateModel->find($id);
@@ -229,7 +295,6 @@ class Estimates extends BaseController
             'isPdf'    => true
         ];
 
-        // Just use a clean HTML print view.
         return view('estimates/print', $data);
     }
 }

@@ -456,6 +456,32 @@ class Settings extends BaseController
         return $this->response->setJSON(['success' => true, 'message' => 'Slack settings saved.']);
     }
 
+    public function stripe_platform()
+    {
+        $data = [
+            'title'          => 'Platform Stripe Settings · BPMS247',
+            'mode'           => setting('platform_stripe_mode') ?: 'sandbox',
+            'test_pk'       => setting('platform_stripe_test_public_key'),
+            'test_sk'       => setting('platform_stripe_test_secret_key'),
+            'live_pk'       => setting('platform_stripe_live_public_key'),
+            'live_sk'       => setting('platform_stripe_live_secret_key'),
+            'webhook_secret' => setting('platform_stripe_webhook_secret'),
+        ];
+        return $this->render('settings/stripe_platform', $data);
+    }
+
+    public function save_platform_stripe()
+    {
+        $this->settingModel->setValue('platform_stripe_mode', $this->request->getPost('mode'), 'integration');
+        $this->settingModel->setValue('platform_stripe_test_public_key', $this->request->getPost('test_pk'), 'integration');
+        $this->settingModel->setValue('platform_stripe_test_secret_key', $this->request->getPost('test_sk'), 'integration');
+        $this->settingModel->setValue('platform_stripe_live_public_key', $this->request->getPost('live_pk'), 'integration');
+        $this->settingModel->setValue('platform_stripe_live_secret_key', $this->request->getPost('live_sk'), 'integration');
+        $this->settingModel->setValue('platform_stripe_webhook_secret', $this->request->getPost('webhook_secret'), 'integration');
+
+        return redirect()->back()->with('message', 'Platform Stripe settings updated successfully.');
+    }
+
     // Google Drive
     public function google_drive()
     {

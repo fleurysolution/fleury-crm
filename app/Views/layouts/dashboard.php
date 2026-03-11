@@ -63,6 +63,24 @@
                 <i class="fa-solid fa-layer-group"></i> Projects
             </a>
 
+            <div class="sidebar-category">Field & Quality</div>
+            <a href="<?= site_url('rfis') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'rfis') ? 'active' : '' ?>">
+                <i class="fa-solid fa-circle-question"></i> RFIs
+            </a>
+            <a href="<?= site_url('submittals') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'submittals') ? 'active' : '' ?>">
+                <i class="fa-solid fa-file-import"></i> Submittals
+            </a>
+            <a href="<?= site_url('drawings') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'drawings') ? 'active' : '' ?>">
+                <i class="fa-solid fa-compass-drafting"></i> Drawings
+            </a>
+            <a href="<?= site_url('inspections') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'inspections') ? 'active' : '' ?>">
+                <i class="fa-solid fa-clipboard-check"></i> Inspections
+            </a>
+
             <?php if (!$isExternal): ?>
             <a href="<?= site_url('timesheets') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'timesheets') ? 'active' : '' ?>">
@@ -85,6 +103,22 @@
                 <i class="fa-solid fa-calendar-days"></i> Calendar
             </a>
 
+            <div class="sidebar-category">Equipment & Materials</div>
+            <a href="<?= site_url('inventory') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'inventory') ? 'active' : '' ?>">
+                <i class="fa-solid fa-boxes-stacked"></i> Materials Inventory
+            </a>
+            <a href="<?= site_url('assets') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'assets') ? 'active' : '' ?>">
+                <i class="fa-solid fa-truck-ramp-box"></i> Equipment & Fleet
+            </a>
+
+            <div class="sidebar-category">Crew & Payroll</div>
+            <a href="<?= site_url('payroll') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'payroll') ? 'active' : '' ?>">
+                <i class="fa-solid fa-money-check-dollar"></i> Crew Payroll
+            </a>
+
             <div class="sidebar-category">Finance</div>
             <a href="<?= site_url('estimates') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'estimates') ? 'active' : '' ?>">
@@ -93,6 +127,10 @@
             <a href="<?= site_url('invoices') ?>"
                class="sidebar-link <?= str_starts_with($uri, 'invoices') ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-invoice-dollar"></i> Invoices
+            </a>
+            <a href="<?= site_url('reports/financial/pnl') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'reports/financial') ? 'active' : '' ?>">
+                <i class="fa-solid fa-chart-pie"></i> P&L Report
             </a>
 
             <div class="sidebar-category">Management</div>
@@ -132,6 +170,30 @@
             <a href="<?= site_url('settings/construction') ?>"
                class="sidebar-link <?= ($uri === 'settings/construction') ? 'active' : '' ?>">
                 <i class="fa-solid fa-building-columns"></i> Construction
+            </a>
+            <a href="<?= site_url('settings/custom-hub') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'settings/custom-hub') ? 'active' : '' ?>">
+                <i class="fa-solid fa-cube"></i> Custom Hub
+            </a>
+            <a href="<?= site_url('settings/custom-fields') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'settings/custom-fields') ? 'active' : '' ?>">
+                <i class="fa-solid fa-list"></i> Custom Fields
+            </a>
+            <?php endif; ?>
+
+            <?php if (session()->get('tenant_id') === null || session()->get('tenant_id') == 1): ?>
+            <div class="sidebar-category">SaaS Management</div>
+            <a href="<?= site_url('tenants') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'tenants') ? 'active' : '' ?>">
+                <i class="fa-solid fa-sitemap"></i> Organizations
+            </a>
+            <a href="<?= site_url('subscriptions') ?>"
+               class="sidebar-link <?= str_starts_with($uri, 'subscriptions') ? 'active' : '' ?>">
+                <i class="fa-solid fa-tags"></i> Subscription Packages
+            </a>
+            <a href="<?= site_url('settings/stripe-platform') ?>"
+               class="sidebar-link <?= ($uri === 'settings/stripe-platform') ? 'active' : '' ?>">
+                <i class="fa-brands fa-stripe"></i> Stripe Settings
             </a>
             <?php endif; ?>
 

@@ -13,6 +13,8 @@ class SiteDiaryModel extends Model
 
     protected $allowedFields = [
         'project_id',
+        'tenant_id',
+        'branch_id',
         'report_date',
         'weather_conditions',
         'temperature',

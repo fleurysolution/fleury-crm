@@ -2,65 +2,68 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class SubmittalModel extends Model
+class SubmittalModel extends ErpModel
 {
-    protected $table          = 'submittals';
-    protected $primaryKey     = 'id';
-    protected $useTimestamps  = true;
+    protected $table = 'fs_submittals';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
     protected $useSoftDeletes = true;
-    protected $allowedFields  = [
-        'project_id','submittal_number','title','spec_section','type','status',
-        'submitted_by','reviewer_id','due_date','current_revision','days_in_review',
+
+    protected $allowedFields = [
+        'project_id',
+        'tenant_id',
+        'branch_id',
+        'submittal_number',
+        'type',
+        'spec_section',
+        'title',
+        'description',
+        'status',
+        'due_date',
+        'assigned_to',
+        'revision',
+        'created_by',
+        'deleted_at'
     ];
 
-    public function forProject(int $projectId): array
-    {
-        $db = \Config\Database::connect();
-        $query = $db->table('submittals')
-            ->select('submittals.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS submitter_name, CONCAT(r.first_name, " ", r.last_name) AS reviewer_name')
-            ->join('fs_users', 'fs_users.id = submittals.submitted_by', 'left')
-            ->join('fs_users AS r', 'r.id = submittals.reviewer_id', 'left')
-            ->where('submittals.project_id', $projectId)
-            ->where('submittals.deleted_at IS NULL');
-            
-        // RBAC: If the user is a Subcontractor/Vendor, only show submittals they're involved in
-        $userId = session()->get('user_id');
-        $roleSlug = session()->get('role_slug') ?? 'employee';
-        
-        if ($roleSlug === 'subcontractor_vendor') {
-            $query->groupStart()
-                  ->where('submittals.submitted_by', $userId)
-                  ->orWhere('submittals.reviewer_id', $userId)
-                  ->groupEnd();
-        }
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+    protected $deletedField  = 'deleted_at';
 
-        return $query->orderBy('submittals.submittal_number')->get()->getResultArray();
-    }
-
-    public function nextNumber(int $projectId): string
+    public function forProject(int $projectId)
     {
-        $db  = \Config\Database::connect();
-        $row = $db->query('SELECT COUNT(*)+1 AS n FROM submittals WHERE project_id = ?', [$projectId])->getRow();
-        return 'SUB-' . str_pad($row->n, 4, '0', STR_PAD_LEFT);
+        return $this->select($this->table . '.*, 
+                            CONCAT(u1.first_name, " ", u1.last_name) AS submitter_name,
+                            CONCAT(u2.first_name, " ", u2.last_name) AS reviewer_name')
+                    ->join('fs_users u1', 'u1.id = ' . $this->table . '.created_by', 'left')
+                    ->join('fs_users u2', 'u2.id = ' . $this->table . '.assigned_to', 'left')
+                    ->where($this->table . '.project_id', $projectId)
+                    ->orderBy($this->table . '.created_at', 'DESC')
+                    ->findAll();
     }
 
     public function statusCounts(int $projectId): array
     {
-        $rows = $this->selectCount('submittals.id','cnt')->select('submittals.status')
-            ->where('submittals.project_id', $projectId)->where('submittals.deleted_at IS NULL')
-            ->groupBy('submittals.status')->findAll();
-        $out = [];
-        foreach ($rows as $r) { $out[$r['status']] = (int)$r['cnt']; }
-        return $out;
-    }
+        $results = $this->select('status, COUNT(*) as count')
+                        ->where('project_id', $projectId)
+                        ->groupBy('status')
+                        ->findAll();
+        
+        $counts = [
+            'draft'              => 0,
+            'submitted'          => 0,
+            'under_review'       => 0,
+            'approved'           => 0,
+            'approved_as_noted'  => 0,
+            'rejected'           => 0,
+            'resubmit'           => 0,
+        ];
 
-    public function withUserName()
-    {
-        $this->select('submittals.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS submitter_name, CONCAT(r.first_name, " ", r.last_name) AS reviewer_name');
-        $this->join('fs_users', 'fs_users.id = submittals.submitted_by', 'left');
-        $this->join('fs_users AS r', 'r.id = submittals.reviewer_id', 'left');
-        return $this;
+        foreach ($results as $row) {
+            $counts[$row['status']] = (int)$row['count'];
+        }
+
+        return $counts;
     }
 }

@@ -2,18 +2,19 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
+use App\Models\ErpModel;
 
-class ProjectModel extends Model
+class ProjectModel extends ErpModel
 {
     protected $table          = 'projects';
     protected $primaryKey     = 'id';
     protected $useSoftDeletes = true;
     protected $useTimestamps  = true;
     protected $allowedFields  = [
-        'title', 'client_id', 'pm_user_id', 'status', 'priority',
-        'start_date', 'end_date', 'budget', 'currency', 'description',
+        'title', 'tenant_id', 'branch_id', 'client_id', 'pm_user_id', 'status', 'project_stage', 'priority',
+        'start_date', 'end_date', 'budget', 'contract_type', 'versioned_budget_baseline', 'currency', 'description',
         'region_id', 'office_id', 'color', 'created_by',
+        'latitude', 'longitude', 'geofence_radius'
     ];
 
     /** Return projects with client name + PM name joined */

@@ -6,11 +6,9 @@
  * $counts (array, populated from Submittals controller)
  */
 // If not pre-loaded by main controller, load it now
-if (!isset($submittals)) {
-    $subModel = new \App\Models\SubmittalModel();
-    $submittals = $subModel->forProject($project['id']);
-    $counts = $subModel->statusCounts($project['id']);
-}
+$subModel = new \App\Models\SubmittalModel();
+$submittals = $subModel->forProject($project['id']);
+$counts = $subModel->statusCounts($project['id']);
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -70,8 +68,8 @@ if (!isset($submittals)) {
                 <tr>
                     <td class="fw-semibold">
                         <a href="<?= site_url("submittals/{$sub['id']}") ?>" class="text-decoration-none"><?= esc($sub['submittal_number']) ?></a>
-                        <?php if($sub['current_revision'] > 0): ?>
-                            <span class="badge bg-light text-dark border ms-1">Rev <?= $sub['current_revision'] ?></span>
+                        <?php if($sub['revision'] > 0): ?>
+                            <span class="badge bg-light text-dark border ms-1">Rev <?= $sub['revision'] ?></span>
                         <?php endif; ?>
                     </td>
                     <td><span class="badge bg-light text-dark border"><?= ucwords(str_replace('_',' ',$sub['type'])) ?></span></td>
@@ -111,8 +109,12 @@ if (!isset($submittals)) {
             <div class="modal-body bg-light">
                 <div class="card border-0 shadow-sm p-3">
                     <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label small fw-semibold">Title</label>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Number <span class="text-danger">*</span></label>
+                            <input type="text" id="subNumber" class="form-control" placeholder="e.g. 01-001" required>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label small fw-semibold">Title <span class="text-danger">*</span></label>
                             <input type="text" id="subTitle" class="form-control" placeholder="e.g. Paint Color Samples">
                         </div>
                         <div class="col-md-4">
@@ -162,15 +164,18 @@ function openNewSubmittalModal() {
 
 function submitNewSubmittal() {
     const title = document.getElementById('subTitle').value.trim();
+    const number = document.getElementById('subNumber').value.trim();
+    if (!number) { alert('Submittal Number is required.'); return; }
     if (!title) { alert('Title is required.'); return; }
 
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
-    fd.append('title',        title);
-    fd.append('type',         document.getElementById('subType').value);
-    fd.append('spec_section', document.getElementById('subSpec').value);
-    fd.append('due_date',     document.getElementById('subDue').value);
-    fd.append('reviewer_id',  document.getElementById('subReviewer').value);
+    fd.append('submittal_number', document.getElementById('subNumber').value.trim());
+    fd.append('title',            title);
+    fd.append('type',             document.getElementById('subType').value);
+    fd.append('spec_section',     document.getElementById('subSpec').value);
+    fd.append('due_date',         document.getElementById('subDue').value);
+    fd.append('assigned_to',      document.getElementById('subReviewer').value);
 
     fetch(`/staging/public/projects/<?= $project['id'] ?>/submittals`, {
         method: 'POST', 

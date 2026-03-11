@@ -5,186 +5,129 @@ namespace App\Controllers;
 use App\Models\SubmittalModel;
 use App\Models\SubmittalRevisionModel;
 use App\Models\ProjectModel;
+use App\Models\ProjectMemberModel;
 
 class Submittals extends BaseAppController
 {
-    /**
-     * GET /projects/:id/submittals — submittal register
-     */
-    public function index(int $projectId): string
+    protected SubmittalModel $submittalModel;
+    protected ProjectModel $projectModel;
+
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request,
+                                   \CodeIgniter\HTTP\ResponseInterface $response,
+                                   \Psr\Log\LoggerInterface $logger): void
     {
-        $project  = (new ProjectModel())->find($projectId);
-        if (!$project) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-
-        $subModel = new SubmittalModel();
-        $submittals = $subModel->forProject($projectId);
-        $counts     = $subModel->statusCounts($projectId);
-
-        return $this->render('submittals/index', [
-            'project'    => $project,
-            'submittals' => $submittals,
-            'counts'     => $counts,
-        ]);
+        parent::initController($request, $response, $logger);
+        $this->submittalModel = new SubmittalModel();
+        $this->projectModel   = new ProjectModel();
     }
 
-    /**
-     * GET /submittals/:id — detail + revision trail
-     */
-    public function show(int $id): string
+    public function index(int $projectId)
     {
-        $subModel  = new SubmittalModel();
-        $submittal = $subModel->withUserName()->find($id);
-        if (!$submittal) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-
-        $project   = (new ProjectModel())->find($submittal['project_id']);
-        $revisions = (new SubmittalRevisionModel())->forSubmittal($id);
-
-        $db = \Config\Database::connect();
-        $members = $db->table('project_members')->select('fs_users.id as user_id, fs_users.first_name, fs_users.last_name, roles.name as role, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS name')
-            ->join('fs_users', 'fs_users.id = project_members.user_id')
-            ->join('user_roles', 'user_roles.user_id = fs_users.id', 'left')
-            ->join('roles', 'roles.id = user_roles.role_id', 'left')
-            ->where('project_members.project_id', $submittal['project_id'])
-            ->get()->getResultArray();
-
-        return $this->render('submittals/show', [
-            'project'   => $project,
-            'submittal' => $submittal,
-            'revisions' => $revisions,
-            'members'   => $members,
-        ]);
+        $submittals = $this->submittalModel->where('project_id', $projectId)->orderBy('created_at', 'DESC')->findAll();
+        return $this->response->setJSON(['status' => 'success', 'data' => $submittals]);
     }
 
-    /**
-     * POST /projects/:id/submittals — create new submittal
-     */
-    public function store(int $projectId): \CodeIgniter\HTTP\Response|\CodeIgniter\HTTP\RedirectResponse
+    public function store(int $projectId)
     {
-        $subModel = new SubmittalModel();
+        $subNumber = $this->request->getPost('submittal_number');
+        $title     = $this->request->getPost('title');
+
+        if (empty($subNumber) || empty($title)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Submittal Number and Title are required.'])->setStatusCode(400);
+        }
+
+        $project = $this->projectModel->find($projectId);
+
         $data = [
-            'project_id'       => $projectId,
-            'submittal_number' => $subModel->nextNumber($projectId),
-            'title'            => $this->request->getPost('title'),
-            'spec_section'     => $this->request->getPost('spec_section'),
-            'type'             => $this->request->getPost('type') ?: 'shop_drawing',
-            'status'           => 'submitted',
-            'submitted_by'     => $this->currentUser['id'],
-            'reviewer_id'      => $this->request->getPost('reviewer_id') ?: null,
-            'due_date'         => $this->request->getPost('due_date')    ?: null,
-            'current_revision' => 0,
+            'tenant_id'         => $project['tenant_id'],
+            'branch_id'         => $project['branch_id'],
+            'project_id'        => $projectId,
+            'submittal_number'  => $this->request->getPost('submittal_number'),
+            'spec_section'      => $this->request->getPost('spec_section'),
+            'title'             => $this->request->getPost('title'),
+            'description'       => $this->request->getPost('description'),
+            'status'            => 'submitted',
+            'due_date'          => $this->request->getPost('due_date'),
+            'assigned_to'       => $this->request->getPost('assigned_to'),
+            'created_by'        => session('user_id'),
         ];
 
-        $subId = $subModel->insert($data);
-
-        // Create initial revision record
-        (new SubmittalRevisionModel())->insert([
-            'submittal_id' => $subId,
-            'revision_no'  => 0,
-            'status'       => 'submitted',
-        ]);
-
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true, 'id' => $subId, 'number' => $data['submittal_number']]);
+        try {
+            $id = $this->submittalModel->insert($data);
+            session()->setFlashdata('message', 'Submittal created successfully.');
+            return $this->response->setJSON(['success' => true, 'id' => $id]);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()])->setStatusCode(400);
         }
-        return redirect()->to(site_url("submittals/{$subId}"))->with('success', 'Submittal ' . $data['submittal_number'] . ' created.');
     }
 
-    /**
-     * POST /submittals/:id/review — add review decision + create new revision
-     */
-    public function review(int $id): \CodeIgniter\HTTP\Response
+    public function show(int $submittalId)
     {
-        $subModel = new SubmittalModel();
-        $sub      = $subModel->find($id);
-        if (!$sub) return $this->response->setJSON(['success' => false]);
+        $submittal = $this->submittalModel
+                        ->select('fs_submittals.*, 
+                                 CONCAT(u1.first_name, " ", u1.last_name) AS submitter_name,
+                                 CONCAT(u2.first_name, " ", u2.last_name) AS reviewer_name')
+                        ->join('fs_users u1', 'u1.id = fs_submittals.created_by', 'left')
+                        ->join('fs_users u2', 'u2.id = fs_submittals.assigned_to', 'left')
+                        ->find($submittalId);
+
+        if (!$submittal) {
+            return $this->response->setStatusCode(404);
+        }
+
+        $project = $this->projectModel->find($submittal['project_id']);
+        $revisions = (new \App\Models\SubmittalRevisionModel())->forSubmittal($submittalId);
+        $members = (new \App\Models\ProjectMemberModel())->getMembers($submittal['project_id']);
+
+        return $this->render('submittals/show', [
+            'title'     => 'Submittal ' . $submittal['submittal_number'],
+            'submittal' => $submittal,
+            'project'   => $project,
+            'revisions' => $revisions,
+            'members'   => $members
+        ]);
+    }
+
+    public function review(int $submittalId)
+    {
+        $submittal = $this->submittalModel->find($submittalId);
+        if (!$submittal) {
+            return $this->response->setStatusCode(404);
+        }
 
         $status    = $this->request->getPost('status');
         $forwardTo = $this->request->getPost('forward_to');
         $notes     = $this->request->getPost('notes');
         $sigData   = $this->request->getPost('signature_data');
-        $newRev    = (int)$sub['current_revision'] + 1;
 
-        $revData = [
-            'submittal_id' => $id,
-            'revision_no'  => $newRev,
-            'status'       => $status,
-            'reviewer_id'  => $this->currentUser['id'],
-            'reviewed_at'  => date('Y-m-d H:i:s'),
-            'notes'        => $notes,
-        ];
+        // 1. Create a new revision/review record
+        $revModel = new \App\Models\SubmittalRevisionModel();
+        $revModel->insert([
+            'submittal_id'  => $submittalId,
+            'revision_no'   => $submittal['revision'] + 1,
+            'status'        => $status,
+            'reviewer_id'   => session('user_id'),
+            'reviewed_at'   => date('Y-m-d H:i:s'),
+            'notes'         => $notes,
+            'signature_data'=> $sigData,
+            'signature_ip'  => $this->request->getIPAddress(),
+            'signed_at'     => $sigData ? date('Y-m-d H:i:s') : null,
+        ]);
 
-        if ($sigData) {
-            $revData['signature_data'] = $sigData;
-            $revData['signature_ip']   = $this->request->getIPAddress();
-            $revData['signed_at']      = date('Y-m-d H:i:s');
-        }
-
-        // Record the current reviewer's decision in the revision history
-        (new SubmittalRevisionModel())->insert($revData);
-
-        // Update the master submittal record
+        // 2. Update the main submittal status
         $updateData = [
-            'current_revision' => $newRev,
+            'status'   => $status,
+            'revision' => $submittal['revision'] + 1
         ];
-        
-        if ($forwardTo) {
-            // If forwarded to someone else, status remains "under_review" for the next person
+
+        // 3. Handle forwarding
+        if (!empty($forwardTo)) {
             $updateData['status']      = 'under_review';
-            $updateData['reviewer_id'] = $forwardTo;
-        } else {
-            // Otherwise, apply the final decision to the submittal
-            $updateData['status']      = $status;
-            $updateData['reviewer_id'] = $this->currentUser['id'];
+            $updateData['assigned_to'] = $forwardTo;
         }
 
-        $subModel->update($id, $updateData);
+        $this->submittalModel->update($submittalId, $updateData);
 
-        // Send notifications
-        $creatorId = $sub['submitted_by'];
-        $title = "Submittal #{$sub['submittal_number']} Reviewed: " . ucfirst(str_replace('_', ' ', $status));
-        $url = "submittals/{$id}";
-        
-        if ($forwardTo) {
-            // Notify the new reviewer
-            \App\Models\NotificationModel::send(
-                $forwardTo,
-                'submittal_forwarded',
-                "Submittal #{$sub['submittal_number']} forwarded to you for review",
-                ['url' => $url, 'body' => $notes ?: '']
-            );
-            // Notify the creator that it was forwarded
-            if (current_user_id() !== $creatorId) {
-                \App\Models\NotificationModel::send(
-                    $creatorId,
-                    'submittal_forwarded_creator',
-                    "Submittal #{$sub['submittal_number']} was forwarded for further review",
-                    ['url' => $url]
-                );
-            }
-        } else {
-            // Final decision applied
-            if (current_user_id() !== $creatorId) {
-                \App\Models\NotificationModel::send(
-                    $creatorId,
-                    'submittal_reviewed',
-                    $title,
-                    ['url' => $url, 'body' => $notes ?: 'Decision: ' . $status]
-                );
-            }
-        }
-
-        return $this->response->setJSON(['success' => true, 'status' => $updateData['status'], 'revision' => $newRev]);
-    }
-
-    /**
-     * POST /submittals/:id/delete — soft delete
-     */
-    public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
-    {
-        $subModel = new SubmittalModel();
-        $sub      = $subModel->find($id);
-        $subModel->delete($id);
-        return redirect()->to(site_url("projects/{$sub['project_id']}?tab=submittals"))
-            ->with('success', 'Submittal deleted.');
+        return $this->response->setJSON(['success' => true]);
     }
 }

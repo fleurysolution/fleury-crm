@@ -74,16 +74,12 @@ $tabList = [
     'estimates'  => ['Estimates',  'fa-file-invoice'],
     'procurement'=> ['Procurement','fa-file-contract'],
     'field'      => ['Field App',  'fa-helmet-safety'],
+    'drawings'   => ['Drawings',   'fa-map'],
     'photos'     => ['Site Photos','fa-images'],
-    'files'      => ['Files',      'fa-folder-open'],
-    'contracts'  => ['Contracts',  'fa-file-contract'],
-    'boq'        => ['BOQ',        'fa-clipboard-list'],
-    'finance'    => ['Finance',    'fa-file-invoice-dollar'],
-    'notes'      => ['Notes',      'fa-note-sticky'],
-    'team'       => ['Team',       'fa-users'],
-    'activity'   => ['Activity',   'fa-clock-rotate-left'],
-    'areas'      => ['Areas',      'fa-sitemap'],
-    'schedule'   => ['Schedule',   'fa-calendar-day'],
+    'change_management' => ['Change Management', 'fa-file-invoice-dollar'],
+    'meetings'   => ['Meetings', 'fa-users-rectangle'],
+    'bidding'    => ['Bidding', 'fa-file-signature'],
+    'finance_wip'=> ['WIP Report', 'fa-chart-pie'],
     'files'      => ['Files',      'fa-folder-open'],
     'members'    => ['Team',       'fa-users'],
 ]; ?>
@@ -124,13 +120,21 @@ $tabList = [
     case 'photos':     include __DIR__ . '/tabs/site_photos_inline.php'; break;
     case 'contracts':  include __DIR__ . '/tabs/contracts_inline.php'; break;
     case 'boq':        include __DIR__ . '/tabs/boq_inline.php'; break;
-    case 'finance':    include __DIR__ . '/tabs/finance_inline.php'; break;
+    case 'finance':    
+        $budget = $budget_data;
+        include __DIR__ . '/tabs/finance_analytics.php'; 
+        break;
     case 'report':     include __DIR__ . '/tabs/report_inline.php'; break;
     case 'activity':   include __DIR__ . '/tabs/activity_inline.php'; break;
     case 'areas':      include __DIR__ . '/tabs/areas_inline.php'; break;
     case 'members':    include __DIR__ . '/tabs/members_inline.php'; break;
     case 'files':      include __DIR__ . '/tabs/files_inline.php'; break;
     case 'schedule':   include __DIR__ . '/tabs/schedule_inline.php'; break;
+    case 'change_management': include __DIR__ . '/tabs/change_management.php'; break;
+    case 'meetings':   include __DIR__ . '/tabs/meetings.php'; break;
+    case 'bidding':    include __DIR__ . '/tabs/bidding.php'; break;
+    case 'drawings':   include __DIR__ . '/tabs/drawings_inline.php'; break;
+    case 'finance_wip': include __DIR__ . '/tabs/finance_wip.php'; break;
     default:           include __DIR__ . '/tabs/overview_inline.php'; break;
 endswitch; ?>
 </div>

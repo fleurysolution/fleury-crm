@@ -2,25 +2,25 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
-
-class DrawingModel extends Model
+class DrawingModel extends ErpModel
 {
-    protected $table          = 'project_drawings';
-    protected $primaryKey     = 'id';
-    protected $returnType     = 'array';
+    protected $table = 'fs_drawings';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
     protected $useSoftDeletes = true;
 
     protected $allowedFields = [
         'project_id',
-        'drawing_no',
-        'title',
+        'tenant_id',
+        'branch_id',
         'discipline',
+        'drawing_number',
+        'title',
+        'current_revision_id',
+        'revision',
+        'file_path',
         'status',
-        'current_revision',
         'created_by',
-        'created_at',
-        'updated_at',
         'deleted_at'
     ];
 
@@ -29,17 +29,13 @@ class DrawingModel extends Model
     protected $updatedField  = 'updated_at';
     protected $deletedField  = 'deleted_at';
 
-    /**
-     * Get all master drawings for a project, optionally mapped with uploader name.
-     */
-    public function forProject(int $projectId): array
+    public function forProject(int $projectId)
     {
-        return $this->select('project_drawings.*, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS creator_name')
-            ->join('fs_users', 'fs_users.id = project_drawings.created_by', 'left')
-            ->where('project_drawings.project_id', $projectId)
-            ->where('project_drawings.deleted_at IS NULL')
-            ->orderBy('project_drawings.discipline', 'ASC')
-            ->orderBy('project_drawings.drawing_no', 'ASC')
-            ->findAll();
+        return $this->select($this->table . '.*, r.revision_no AS revision, CONCAT(u.first_name, " ", u.last_name) AS creator_name')
+                    ->join('project_drawing_revisions r', 'r.id = ' . $this->table . '.current_revision_id', 'left')
+                    ->join('fs_users u', 'u.id = r.uploaded_by', 'left')
+                    ->where($this->table . '.project_id', $projectId)
+                    ->orderBy($this->table . '.drawing_number', 'ASC')
+                    ->findAll();
     }
 }

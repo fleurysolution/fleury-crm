@@ -1,11 +1,14 @@
 <?php
 $sModel = new \App\Models\SovItemModel();
 $pModel = new \App\Models\PayAppModel();
+$eModel = new \App\Models\ProjectExpenseModel();
 
 $sovItems = $sModel->forProject($project['id']);
 $payApps  = $pModel->forProject($project['id']);
+$expenses  = $eModel->forProject($project['id']);
 
 $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
+$totalExpenses = array_sum(array_column($expenses, 'amount'));
 ?>
 
 <div class="row g-4">
@@ -18,7 +21,7 @@ $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
             </button>
         </div>
 
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm mb-4">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
@@ -65,6 +68,69 @@ $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
                 </table>
             </div>
         </div>
+
+        <!-- Project Expenses Section -->
+        <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+            <h5 class="fw-bold mb-0">Project Expenses</h5>
+            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newExpenseModal">
+                <i class="fa-solid fa-receipt me-1"></i> Log Expense
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-3">Date</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Vendor</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end pe-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($expenses)): ?>
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted small">No expenses logged for this project yet.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($expenses as $exp): ?>
+                                <tr>
+                                    <td class="ps-3 small"><?= date('M d, Y', strtotime($exp['expense_date'])) ?></td>
+                                    <td><span class="badge bg-light text-dark border"><?= esc($exp['category']) ?></span></td>
+                                    <td class="small"><?= esc($exp['description']) ?></td>
+                                    <td class="small"><?= esc($exp['vendor']) ?></td>
+                                    <td class="text-end fw-bold">$<?= number_format($exp['amount'], 2) ?></td>
+                                    <td class="text-center">
+                                        <?php 
+                                            $eStatusClass = 'bg-secondary';
+                                            if ($exp['status'] === 'approved') $eStatusClass = 'bg-success';
+                                            if ($exp['status'] === 'rejected') $eStatusClass = 'bg-danger';
+                                            if ($exp['status'] === 'submitted' || $exp['status'] === 'pending') $eStatusClass = 'bg-primary';
+                                        ?>
+                                        <span class="badge <?= $eStatusClass ?>"><?= ucfirst($exp['status']) ?></span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <?php if ($exp['receipt_path']): ?>
+                                                <a href="<?= site_url($exp['receipt_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary border-0"><i class="fa-solid fa-paperclip"></i></a>
+                                            <?php endif; ?>
+                                            <form action="<?= site_url("finance/expenses/{$exp['id']}/delete") ?>" method="POST" onsubmit="return confirm('Delete this expense?');">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="fa-solid fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- Right Column: Payment Applications (Pay Apps) -->
@@ -79,7 +145,7 @@ $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
         </div>
 
         <?php if (empty($sovItems)): ?>
-            <div class="alert alert-warning border-0">
+            <div class="alert alert-warning border-0 small">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i> You must build the Contract Schedule of Values (SOV) before generating progress invoices.
             </div>
         <?php elseif (empty($payApps)): ?>
@@ -111,7 +177,6 @@ $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
                             <a href="<?= site_url("finance/pay-apps/{$app['id']}") ?>" class="btn btn-sm btn-outline-primary w-100">
                                 Open Worksheet
                             </a>
-                            <!-- Print PDF button -->
                             <a href="<?= site_url("finance/pay-apps/{$app['id']}/pdf") ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="Export PDF">
                                 <i class="fa-solid fa-print"></i>
                             </a>
@@ -151,6 +216,60 @@ $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-primary">Add Row</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- New Expense Modal -->
+<div class="modal fade" id="newExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="<?= site_url("projects/{$project['id']}/finance/expenses") ?>" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow">
+            <?= csrf_field() ?>
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold">Log Project Expense</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Expense Date</label>
+                        <input type="date" name="expense_date" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Amount ($)</label>
+                        <input type="number" step="0.01" min="0" name="amount" class="form-control" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Category</label>
+                    <select name="category" class="form-select" required>
+                        <option value="Materials">Materials</option>
+                        <option value="Equipment Rental">Equipment Rental</option>
+                        <option value="Subcontractor">Subcontractor</option>
+                        <option value="Permits/Fees">Permits/Fees</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Vendor/Supplier</label>
+                    <input type="text" name="vendor" class="form-control" placeholder="e.g. Home Depot, Sunbelt Rentals" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Description</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="What was purchased?"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Receipt/Invoice (Optional)</label>
+                    <input type="file" name="receipt" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-save"></i> Submit Expense
+                </button>
             </div>
         </form>
     </div>

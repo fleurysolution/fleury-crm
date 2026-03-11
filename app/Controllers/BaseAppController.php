@@ -50,6 +50,43 @@ class BaseAppController extends Controller
         $this->bootstrapUserAndSettings();
         $this->bootstrapLocale();
         $this->maybeRedirectLandingPage();
+        $this->checkSubscription();
+    }
+
+    protected function checkSubscription(): void
+    {
+        if (!$this->loginUser) return;
+        
+        // Super Admins (tenant_id = null or specifically marked) bypass this
+        // For now, let's assume tenant_id = 1 is the platform owner/super admin container
+        if ($this->loginUser->tenant_id === null || $this->loginUser->tenant_id == 1) {
+            return;
+        }
+
+        $router = service('router');
+        $controller = $router->controllerName();
+        
+        // Exclude certain controllers from blocking
+        $excluded = [
+            '\App\Controllers\Auth',
+            '\App\Controllers\Signup',
+            '\App\Controllers\Settings', // Maybe partially exclude?
+        ];
+
+        if (in_array($controller, $excluded)) {
+            return;
+        }
+
+        $subManager = new \App\Services\SubscriptionManager();
+        if (!$subManager->isSubscriptionActive($this->loginUser->tenant_id)) {
+            $currentPath = parse_url(current_url(), PHP_URL_PATH);
+            
+            // Allow access to locked and renew pages
+            if (strpos($currentPath, 'subscription/locked') === false && strpos($currentPath, 'subscription/renew') === false) {
+                header('Location: ' . site_url('subscription/locked'));
+                exit;
+            }
+        }
     }
 
     protected function bootstrapUserAndSettings(): void

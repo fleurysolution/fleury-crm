@@ -4,7 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class FsAsApprovalRequestStepModel extends Model
+class FsApprovalRequestStepModel extends Model
 {
     protected $table          = 'fs_as_approval_request_steps';
     protected $primaryKey     = 'id';

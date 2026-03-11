@@ -4,14 +4,13 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class EstimateModel extends Model
+class EstimateModel extends ErpModel
 {
     protected $table          = 'estimates';
     protected $primaryKey     = 'id';
-    protected $returnType     = 'array';
-    protected $useSoftDeletes = true;
-
     protected $allowedFields  = [
+        'tenant_id',
+        'branch_id',
         'client_id',
         'lead_id',
         'estimate_date',
@@ -26,10 +25,7 @@ class EstimateModel extends Model
         'discount_amount',
         'discount_amount_type',
         'discount_type',
-        'created_by',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'created_by'
     ];
 
     protected $useTimestamps  = true;

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class PaymentModel extends Model
+class PaymentModel extends ErpModel
 {
     protected $table          = 'invoice_payments';
     protected $primaryKey     = 'id';
@@ -12,6 +12,8 @@ class PaymentModel extends Model
     protected $useSoftDeletes = true;
 
     protected $allowedFields  = [
+        'tenant_id',
+        'branch_id',
         'invoice_id',
         'payment_method_id',
         'payment_date',
