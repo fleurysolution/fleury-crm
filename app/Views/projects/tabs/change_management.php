@@ -48,9 +48,9 @@
                                 </td>
                                 <td class="text-end pe-4">
                                     <?php if ($event['status'] !== 'approved'): ?>
-                                    <a href="<?= site_url("change-orders/convert/{$event['id']}") ?>" class="btn btn-sm btn-outline-success">
+                                    <button class="btn btn-sm btn-outline-success" onclick="openConvertModal(<?= $event['id'] ?>, '<?= esc($event['title'], 'js') ?>')">
                                         <i class="fa-solid fa-file-export me-1"></i> Convert to CO
-                                    </a>
+                                    </button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -59,6 +59,38 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Convert Event to CO Modal -->
+    <div class="modal fade" id="convertEventModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow-lg" style="border-radius:12px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Convert to Change Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="convertEventForm" action="" method="post">
+                    <?= csrf_field() ?>
+                    <div class="modal-body py-4">
+                        <p class="small text-muted mb-3">Convert the event "<span id="convertEventTitle" class="fw-bold"></span>" into a formal Change Order.</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Link to Contract (Optional)</label>
+                            <select name="contract_id" class="form-select">
+                                <option value="">— No Specific Contract —</option>
+                                <?php foreach ($project_contracts as $ct): ?>
+                                <option value="<?= $ct['id'] ?>"><?= esc($ct['contract_number']) ?> - <?= esc($ct['title']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text smallest">Linking to a contract will automatically update its claimable value.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success px-4">Create Change Order</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -160,6 +192,12 @@
 </div>
 
 <script>
+function openConvertModal(eventId, title) {
+    document.getElementById('convertEventTitle').innerText = title;
+    document.getElementById('convertEventForm').action = '<?= site_url('change-orders/convert/') ?>' + eventId;
+    new bootstrap.Modal(document.getElementById('convertEventModal')).show();
+}
+
 function approveCO(id) {
     if (!confirm('Are you sure you want to approve this Change Order? This will impact the project budget.')) return;
     

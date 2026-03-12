@@ -14,6 +14,7 @@ class PayAppItemModel extends Model
     protected $allowedFields = [
         'pay_app_id',
         'sov_item_id',
+        'change_order_id',
         'work_completed_this_period',
         'materials_presently_stored'
     ];

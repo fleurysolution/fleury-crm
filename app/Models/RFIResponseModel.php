@@ -6,10 +6,10 @@ use CodeIgniter\Model;
 
 class RFIResponseModel extends Model
 {
-    protected $table         = 'rfi_responses';
+    protected $table         = 'fs_rfi_replies';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
-    protected $allowedFields = ['rfi_id','user_id','body','attachments','is_official'];
+    protected $allowedFields = ['rfi_id','user_id','reply','is_official_answer'];
 
     public function forRFI(int $rfiId): array
     {

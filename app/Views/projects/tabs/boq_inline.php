@@ -50,6 +50,9 @@ function renderBOQRow(array $item, int $depth = 0): void { ?>
 
 <!-- Toolbar -->
 <div class="d-flex justify-content-end gap-2 mb-2">
+    <button class="btn btn-sm btn-outline-success" onclick="importBOQ()">
+        <i class="fa-solid fa-file-excel me-1"></i>Import from Master Excel
+    </button>
     <a href="<?= site_url("projects/{$project['id']}/boq/export") ?>" class="btn btn-sm btn-outline-secondary">
         <i class="fa-solid fa-download me-1"></i>Export CSV
     </a>
@@ -158,5 +161,30 @@ function saveBOQItem() {
         headers:{'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest', [CSRF_NAME]: CSRF_TOKEN},
         body: JSON.stringify(payload),
     }).then(r=>r.json()).then(d => { if (d.success) location.reload(); });
+}
+function importBOQ() {
+    if (!confirm('This will replace all current BOQ items with data from the Master Excel. Proceed?')) return;
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Importing...';
+    
+    fetch(`/staging/public/projects/<?= $project['id'] ?>/boq/import`, {
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest', [CSRF_NAME]: CSRF_TOKEN},
+    }).then(r=>r.json()).then(d => {
+        if (d.success) {
+            alert('Imported ' + d.count + ' items successfully.');
+            location.reload();
+        } else {
+            alert('Error: ' + d.message);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }).catch(err => {
+        alert('Server error occurred.');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    });
 }
 </script>

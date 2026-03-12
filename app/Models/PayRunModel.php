@@ -15,6 +15,8 @@ class PayRunModel extends ErpModel
         'pay_period_start',
         'pay_period_end',
         'status',
+        'total_gross',
+        'total_net',
         'approved_by',
         'created_at',
         'updated_at'

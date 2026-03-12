@@ -7,8 +7,14 @@ $sovItems = $sModel->forProject($project['id']);
 $payApps  = $pModel->forProject($project['id']);
 $expenses  = $eModel->forProject($project['id']);
 
+// Change Orders
+$coModel = new \App\Models\ChangeOrderModel();
+$approvedCOs = $coModel->where(['project_id' => $project['id'], 'status' => 'approved'])->findAll();
+$totalCOAmount = array_sum(array_column($approvedCOs, 'amount'));
+
 $totalScheduledValue = array_sum(array_column($sovItems, 'scheduled_value'));
 $totalExpenses = array_sum(array_column($expenses, 'amount'));
+$revisedContractSum = $totalScheduledValue + $totalCOAmount;
 ?>
 
 <div class="row g-4">
@@ -59,8 +65,20 @@ $totalExpenses = array_sum(array_column($expenses, 'amount'));
                     <?php if (!empty($sovItems)): ?>
                     <tfoot class="bg-light">
                         <tr>
-                            <td colspan="2" class="text-end fw-bold">Original Contract Total:</td>
-                            <td class="text-end fw-bold fs-5 text-success">$<?= number_format($totalScheduledValue, 2) ?></td>
+                            <td colspan="2" class="text-end text-muted small">Original Contract Total:</td>
+                            <td class="text-end fw-bold text-muted small">$<?= number_format($totalScheduledValue, 2) ?></td>
+                            <td></td>
+                        </tr>
+                        <?php if ($totalCOAmount != 0): ?>
+                        <tr>
+                            <td colspan="2" class="text-end text-muted small">Net Change by Change Orders:</td>
+                            <td class="text-end fw-bold text-muted small">$<?= number_format($totalCOAmount, 2) ?></td>
+                            <td></td>
+                        </tr>
+                        <?php endif; ?>
+                        <tr class="border-top border-dark">
+                            <td colspan="2" class="text-end fw-bold">Revised Contract Sum to Date:</td>
+                            <td class="text-end fw-bold fs-5 text-success">$<?= number_format($revisedContractSum, 2) ?></td>
                             <td></td>
                         </tr>
                     </tfoot>

@@ -62,9 +62,49 @@ $badge = ['draft'=>'secondary','submitted'=>'info','under_review'=>'warning','ap
                             <?= esc($submittal['submitter_name'] ?? 'Unknown User') ?>
                         </div>
                     </div>
+                    <?php if ($submittal['description']): ?>
+                        <div class="col-12">
+                            <hr class="my-2 opacity-50">
+                            <div class="text-muted small fw-semibold mb-1">Description</div>
+                            <div class="small text-dark"><?= nl2br(esc($submittal['description'])) ?></div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
+
+        <!-- Attachments -->
+        <?php if (!empty($attachments)): ?>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">Attachments</h6>
+                <span class="badge bg-light text-dark border"><?= count($attachments) ?> Files</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <?php foreach ($attachments as $file): 
+                        $icon = \App\Models\ProjectFileModel::mimeIcon($file['mime_type']);
+                        $size = \App\Models\ProjectFileModel::formatSize($file['size']);
+                    ?>
+                    <div class="list-group-item d-flex align-items-center py-3 border-0">
+                        <div class="bg-light rounded p-2 me-3">
+                            <i class="fa-solid <?= $icon ?> fa-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold small"><?= esc($file['name']) ?></div>
+                            <div class="smallest text-muted"><?= $size ?> • Uploaded by <?= esc($file['uploader_name']) ?> on <?= date('M d, Y', strtotime($file['created_at'])) ?></div>
+                        </div>
+                        <div>
+                            <a href="<?= base_url($file['path']) ?>" class="btn btn-sm btn-light border" download>
+                                <i class="fa-solid fa-download me-1"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Review History -->
         <h6 class="fw-bold mb-3">Review History</h6>
@@ -99,7 +139,7 @@ $badge = ['draft'=>'secondary','submitted'=>'info','under_review'=>'warning','ap
                         
                         <?php if ($rev['filepath']): ?>
                             <div class="mt-3">
-                                <a href="<?= base_url('uploads/'.$rev['filepath']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <a href="<?= base_url($rev['filepath']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
                                     <i class="fa-solid fa-paperclip me-1"></i> Download Attachment
                                 </a>
                             </div>
@@ -154,6 +194,10 @@ $badge = ['draft'=>'secondary','submitted'=>'info','under_review'=>'warning','ap
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Notes / Comments</label>
                         <textarea id="reviewNotes" class="form-control" rows="4" placeholder="Enter review comments or conditions..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Attach Markup (Optional)</label>
+                        <input type="file" id="reviewFile" class="form-control form-control-sm">
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary fw-medium"><i class="fa-solid fa-check me-2"></i>Submit Review</button>
@@ -264,6 +308,9 @@ function submitReview(e) {
     fd.append('forward_to', forwardTo);
     fd.append('notes', notes);
     if (sigData) fd.append('signature_data', sigData);
+
+    const reviewFile = document.getElementById('reviewFile').files[0];
+    if (reviewFile) fd.append('markup', reviewFile);
 
     fetch(`<?= site_url("submittals/{$submittal['id']}/review") ?>`, {
         method: 'POST', body: fd,

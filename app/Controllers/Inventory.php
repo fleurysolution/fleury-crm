@@ -91,6 +91,8 @@ class Inventory extends BaseAppController
 
         // 1. Log Transaction
         $record = [
+            'tenant_id'              => session('tenant_id'),
+            'branch_id'              => session('branch_id'),
             'item_id'                => $itemId,
             'location_id'            => $locationId,
             'project_id_destination' => $this->request->getPost('project_id') ?: null,
@@ -115,6 +117,8 @@ class Inventory extends BaseAppController
             ]);
         } else {
             $sModel->insert([
+                'tenant_id'   => session('tenant_id'),
+                'branch_id'   => session('branch_id'),
                 'item_id'     => $itemId,
                 'location_id' => $locationId,
                 'quantity'    => $adjustment,

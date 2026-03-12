@@ -42,9 +42,9 @@ class Submittals extends BaseAppController
             'tenant_id'         => $project['tenant_id'],
             'branch_id'         => $project['branch_id'],
             'project_id'        => $projectId,
-            'submittal_number'  => $this->request->getPost('submittal_number'),
+            'submittal_number'  => $subNumber,
             'spec_section'      => $this->request->getPost('spec_section'),
-            'title'             => $this->request->getPost('title'),
+            'title'             => $title,
             'description'       => $this->request->getPost('description'),
             'status'            => 'submitted',
             'due_date'          => $this->request->getPost('due_date'),
@@ -54,6 +54,37 @@ class Submittals extends BaseAppController
 
         try {
             $id = $this->submittalModel->insert($data);
+
+            // Handle Attachments
+            $files = $this->request->getFiles();
+            if (isset($files['attachments'])) {
+                $fileModel = new \App\Models\ProjectFileModel();
+                $uploadDir = FCPATH . 'uploads/projects/' . $projectId;
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                foreach ($files['attachments'] as $file) {
+                    if ($file->isValid() && !$file->hasMoved()) {
+                        $newName = $file->getRandomName();
+                        $file->move($uploadDir, $newName);
+
+                        $fileModel->insert([
+                            'project_id'  => $projectId,
+                            'entity_type' => 'submittal',
+                            'entity_id'   => $id,
+                            'name'        => $file->getClientName(),
+                            'stored_name' => $newName,
+                            'path'        => 'uploads/projects/' . $projectId . '/' . $newName,
+                            'mime_type'   => $file->getClientMimeType(),
+                            'size'        => $file->getSize(),
+                            'uploaded_by' => session('user_id'),
+                            'created_at'  => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
+            }
+
             session()->setFlashdata('message', 'Submittal created successfully.');
             return $this->response->setJSON(['success' => true, 'id' => $id]);
         } catch (\Exception $e) {
@@ -78,13 +109,15 @@ class Submittals extends BaseAppController
         $project = $this->projectModel->find($submittal['project_id']);
         $revisions = (new \App\Models\SubmittalRevisionModel())->forSubmittal($submittalId);
         $members = (new \App\Models\ProjectMemberModel())->getMembers($submittal['project_id']);
+        $attachments = (new \App\Models\ProjectFileModel())->forProject($submittal['project_id'], 'submittal', $submittalId);
 
         return $this->render('submittals/show', [
             'title'     => 'Submittal ' . $submittal['submittal_number'],
             'submittal' => $submittal,
             'project'   => $project,
             'revisions' => $revisions,
-            'members'   => $members
+            'members'   => $members,
+            'attachments' => $attachments
         ]);
     }
 
@@ -100,7 +133,21 @@ class Submittals extends BaseAppController
         $notes     = $this->request->getPost('notes');
         $sigData   = $this->request->getPost('signature_data');
 
-        // 1. Create a new revision/review record
+        // 1. Handle Markup File
+        $markupPath = null;
+        $file = $this->request->getFile('markup');
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $newName = $file->getRandomName();
+            $projectId = $submittal['project_id'];
+            $uploadDir = FCPATH . 'uploads/projects/' . $projectId;
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $file->move($uploadDir, $newName);
+            $markupPath = 'uploads/projects/' . $projectId . '/' . $newName;
+        }
+
+        // 2. Create a new revision/review record
         $revModel = new \App\Models\SubmittalRevisionModel();
         $revModel->insert([
             'submittal_id'  => $submittalId,
@@ -109,6 +156,7 @@ class Submittals extends BaseAppController
             'reviewer_id'   => session('user_id'),
             'reviewed_at'   => date('Y-m-d H:i:s'),
             'notes'         => $notes,
+            'filepath'      => $markupPath,
             'signature_data'=> $sigData,
             'signature_ip'  => $this->request->getIPAddress(),
             'signed_at'     => $sigData ? date('Y-m-d H:i:s') : null,

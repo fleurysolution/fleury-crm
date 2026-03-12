@@ -5,6 +5,11 @@
             <a href="<?= site_url('/') ?>" class="list-group-item list-group-item-action"><?= esc(t('dashboard')) ?></a>
             <a href="<?= site_url('projects') ?>" class="list-group-item list-group-item-action"><?= esc(t('Projects')) ?></a>
             
+            <h6 class="text-uppercase text-muted mt-4 mb-2 ps-3" style="font-size: 0.75rem;">Planning & Execution</h6>
+            <a href="<?= site_url('areas') ?>" class="list-group-item list-group-item-action">Area Management</a>
+            <a href="<?= site_url('schedules') ?>" class="list-group-item list-group-item-action">Schedules</a>
+            <a href="<?= site_url('contracts') ?>" class="list-group-item list-group-item-action">Contracts</a>
+
             <h6 class="text-uppercase text-muted mt-4 mb-2 ps-3" style="font-size: 0.75rem;">Field & Quality</h6>
             <a href="<?= site_url('rfis') ?>" class="list-group-item list-group-item-action">RFIs</a>
             <a href="<?= site_url('submittals') ?>" class="list-group-item list-group-item-action">Submittals</a>

@@ -127,6 +127,55 @@ $totalStored    = 0;
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
+
+                    <!-- Change Orders Section -->
+                    <?php if (!empty($changeOrders)): ?>
+                        <tr class="table-light"><td colspan="9" class="ps-3 fw-bold">Approved Change Orders</td></tr>
+                        <?php foreach ($changeOrders as $co): 
+                            $id = $co['id'];
+                            $key = 'co_' . $id;
+                            $scheduled = (float)$co['amount'];
+                            $prev = isset($previousProgress[$key]) ? (float)$previousProgress[$key] : 0.00;
+                            
+                            $thisWork = isset($mappedItems[$key]) ? (float)$mappedItems[$key]['work_completed_this_period'] : 0.00;
+                            $thisMat  = isset($mappedItems[$key]) ? (float)$mappedItems[$key]['materials_presently_stored'] : 0.00;
+                            
+                            $totalScheduled += $scheduled;
+                            $totalPrev += $prev;
+                            $totalThisPeriod += $thisWork;
+                            $totalStored += $thisMat;
+
+                            $maxAllowed = $scheduled - $prev;
+                        ?>
+                            <tr class="sov-row" data-id="<?= $id ?>" data-is-co="1" data-scheduled="<?= $scheduled ?>" data-prev="<?= $prev ?>">
+                                <td class="ps-3 fw-bold text-muted">CO#<?= esc($co['co_number']) ?></td>
+                                <td class="fw-medium text-wrap" style="max-width: 200px;"><?= esc($co['title']) ?></td>
+                                <td class="text-end">$<?= number_format($scheduled, 2) ?></td>
+                                <td class="text-end text-muted">$<?= number_format($prev, 2) ?></td>
+                                
+                                <td class="p-1">
+                                    <input type="number" step="0.01" min="0" max="<?= $maxAllowed ?>" 
+                                           name="co_work_completed[<?= $id ?>]" 
+                                           class="form-control form-control-sm text-end work-input" 
+                                           value="<?= $thisWork > 0 ? $thisWork : '' ?>"
+                                           placeholder="0.00"
+                                           <?= !$isEditable ? 'disabled' : '' ?>>
+                                </td>
+                                <td class="p-1">
+                                    <input type="number" step="0.01" min="0" 
+                                           name="co_materials_stored[<?= $id ?>]" 
+                                           class="form-control form-control-sm text-end mat-input" 
+                                           value="<?= $thisMat > 0 ? $thisMat : '' ?>"
+                                           placeholder="0.00"
+                                           <?= !$isEditable ? 'disabled' : '' ?>>
+                                </td>
+
+                                <td class="text-end fw-bold text-primary total-to-date">$0.00</td>
+                                <td class="text-center pct-complete">0.00%</td>
+                                <td class="text-end pe-3 text-muted balance-to-finish">$<?= number_format($scheduled, 2) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
                 <tfoot class="bg-light fw-bold text-end">
                     <tr>
@@ -171,10 +220,11 @@ $totalStored    = 0;
         let globalMat = 0;
         let globalToDate = 0;
         let globalBalance = 0;
-        let globalScheduled = <?= $totalScheduled ?>;
+        let globalScheduled = 0;
         
         document.querySelectorAll('.sov-row').forEach(row => {
             const scheduled = parseFloat(row.getAttribute('data-scheduled')) || 0;
+            globalScheduled += scheduled;
             const prev = parseFloat(row.getAttribute('data-prev')) || 0;
             
             const workInput = row.querySelector('.work-input');

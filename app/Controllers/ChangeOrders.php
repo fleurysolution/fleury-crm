@@ -22,9 +22,36 @@ class ChangeOrders extends BaseAppController
         $this->automation = new AutomationService();
     }
 
+    private function resolveTenantId(?int $projectId, ?int $eventId = null, ?int $coId = null): ?int
+    {
+        // 1. Check session/user context
+        $tenantId = session()->get('tenant_id') ?? ($this->loginUser->tenant_id ?? null);
+        if ($tenantId) return $tenantId;
+
+        // 2. Fallback to Project context if available
+        if ($projectId) {
+            $project = $this->projects->find($projectId);
+            if ($project && !empty($project['tenant_id'])) return $project['tenant_id'];
+        }
+
+        // 3. Fallback to Event context
+        if ($eventId) {
+            $event = $this->events->find($eventId);
+            if ($event && !empty($event['tenant_id'])) return $event['tenant_id'];
+        }
+
+        // 4. Fallback to CO context
+        if ($coId) {
+            $co = $this->orders->find($coId);
+            if ($co && !empty($co['tenant_id'])) return $co['tenant_id'];
+        }
+
+        return null;
+    }
+
     public function storeEvent(int $projectId)
     {
-        $tenantId = session()->get('tenant_id');
+        $tenantId = $this->resolveTenantId($projectId);
         
         $data = [
             'tenant_id'      => $tenantId,
@@ -44,7 +71,7 @@ class ChangeOrders extends BaseAppController
 
     public function updateEventStatus(int $eventId)
     {
-        $tenantId = session()->get('tenant_id');
+        $tenantId = $this->resolveTenantId(null, $eventId);
         $status = $this->request->getPost('status');
         
         $this->events->where('tenant_id', $tenantId)->update($eventId, ['status' => $status]);
@@ -54,7 +81,7 @@ class ChangeOrders extends BaseAppController
 
     public function convertToCO(int $eventId)
     {
-        $tenantId = session()->get('tenant_id');
+        $tenantId = $this->resolveTenantId(null, $eventId);
         $event = $this->events->where('tenant_id', $tenantId)->find($eventId);
         
         if (!$event) return redirect()->back()->with('error', 'Event not found.');
@@ -67,6 +94,7 @@ class ChangeOrders extends BaseAppController
             'tenant_id'   => $tenantId,
             'project_id'  => $event['project_id'],
             'event_id'    => $eventId,
+            'contract_id' => $this->request->getPost('contract_id') ?: null,
             'co_number'   => $coNumber,
             'title'       => $event['title'],
             'description' => $event['description'],
@@ -82,14 +110,14 @@ class ChangeOrders extends BaseAppController
 
     public function approveCO(int $coId)
     {
-        $tenantId = session()->get('tenant_id');
+        $tenantId = $this->resolveTenantId(null, null, $coId);
         $updateData = [
             'status' => 'approved',
             'approved_at' => date('Y-m-d H:i:s')
         ];
         $this->orders->where('tenant_id', $tenantId)->update($coId, $updateData);
         
-        $co = $this->orders->find($coId);
+        $co = $this->orders->where('tenant_id', $tenantId)->find($coId);
         $this->automation->trigger('change_orders', 'update', $co, $tenantId);
 
         return $this->response->setJSON(['success' => true]);

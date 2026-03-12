@@ -62,6 +62,9 @@ class PayrollEngine
         $slipModel = new PaySlipModel();
         $db = \Config\Database::connect();
         
+        $totalGross = 0;
+        $totalNet   = 0;
+
         foreach ($userHours as $userId => $hours) {
             $user = $db->table('fs_users')->where('id', $userId)->get()->getRow();
             if (!$user) continue;
@@ -89,7 +92,16 @@ class PayrollEngine
                 'taxes_withheld' => $taxes,
                 'deductions'     => 0.00
             ]);
+
+            $totalGross += $grossPay;
+            $totalNet   += $netPay;
         }
+
+        // Update PayRun with totals
+        $runModel->update($payRunId, [
+            'total_gross' => $totalGross,
+            'total_net'   => $totalNet
+        ]);
 
         // Mark timesheets as processed
         $db->table('timesheets')->whereIn('id', $tsIdsToUpdate)->update([

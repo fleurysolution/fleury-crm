@@ -125,7 +125,7 @@ function updateContractStatus(id, status) {
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
     fd.append('status', status);
-    fetch(`/staging/public/contracts/${id}/status`, {method:'POST', body: fd});
+    fetch('<?= site_url("contracts") ?>/' + id + '/status', {method:'POST', body: fd});
 }
 
 function submitContract() {
@@ -142,7 +142,7 @@ function submitContract() {
     fd.append('start_date',      document.getElementById('ctStart').value);
     fd.append('end_date',        document.getElementById('ctEnd').value);
     fd.append('scope',           document.getElementById('ctScope').value);
-    fetch(`/staging/public/projects/<?= $project['id'] ?>/contracts`, {method:'POST', body: fd})
+    fetch(`<?= site_url("projects/{$project['id']}/contracts") ?>`, {method:'POST', body: fd})
         .then(r=>r.json()).then(d=>{
             if (d.success) location.reload();
             else alert('Error creating contract.');

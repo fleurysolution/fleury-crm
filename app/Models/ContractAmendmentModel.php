@@ -27,10 +27,19 @@ class ContractAmendmentModel extends Model
     public function totalApprovedChange(int $contractId): float
     {
         $db = \Config\Database::connect();
-        $r  = $db->query(
+        
+        // 1. Traditional Amendments
+        $amendments  = $db->query(
             'SELECT COALESCE(SUM(value_change),0) AS t FROM project_contract_amendments WHERE contract_id=? AND status="approved"',
             [$contractId]
         )->getRow();
-        return (float)($r->t ?? 0);
+        
+        // 2. Linked Project Change Orders
+        $projectCOs = $db->query(
+            'SELECT COALESCE(SUM(amount),0) AS t FROM change_orders WHERE contract_id=? AND status="approved"',
+            [$contractId]
+        )->getRow();
+
+        return (float)($amendments->t ?? 0) + (float)($projectCOs->t ?? 0);
     }
 }

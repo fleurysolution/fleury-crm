@@ -5,7 +5,7 @@ class AreaModel extends Model {
     protected $primaryKey     = 'id';
     protected $useSoftDeletes = true;
     protected $useTimestamps  = true;
-    protected $allowedFields  = ['project_id','parent_id','name','type','description','sort_order'];
+    protected $allowedFields  = ['project_id','parent_id','name','type','status','start_date','end_date','turnover_date','description','sort_order'];
 
     /** Return entire area tree for a project as nested array */
     public function getTree(int $projectId): array {

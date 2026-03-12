@@ -10,6 +10,8 @@ class InventoryStockModel extends ErpModel
     protected $useSoftDeletes = false;
 
     protected $allowedFields = [
+        'tenant_id',
+        'branch_id',
         'item_id',
         'location_id',
         'quantity',

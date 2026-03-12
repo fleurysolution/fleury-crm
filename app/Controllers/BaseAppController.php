@@ -37,7 +37,7 @@ class BaseAppController extends Controller
         $this->parser     = service('parser');
 
         // helpers (keep to essentials; move module helpers into those modules)
-        helper(['url', 'form', 'cookie', 'i18n']);
+        helper(['url', 'form', 'cookie', 'i18n', 'number']);
 
         // template/layout
         $this->template = new Template();

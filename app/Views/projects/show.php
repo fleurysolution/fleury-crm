@@ -64,6 +64,7 @@ $isExternal = in_array($userRoleSlug, ['subcontractor_vendor', 'client']);
 
 $tabList = [
     'overview'   => ['Overview',   'fa-chart-pie'],
+    'finance'    => ['Finance', 'fa-chart-line'],
     'tasks'      => ['Tasks',      'fa-list-check'],
     'kanban'     => ['Kanban',     'fa-table-columns'],
     'gantt'      => ['Gantt',      'fa-bars-staggered'],
@@ -74,19 +75,26 @@ $tabList = [
     'estimates'  => ['Estimates',  'fa-file-invoice'],
     'procurement'=> ['Procurement','fa-file-contract'],
     'field'      => ['Field App',  'fa-helmet-safety'],
-    'drawings'   => ['Drawings',   'fa-map'],
     'photos'     => ['Site Photos','fa-images'],
     'change_management' => ['Change Management', 'fa-file-invoice-dollar'],
     'meetings'   => ['Meetings', 'fa-users-rectangle'],
+    'areas'      => ['Areas / Zones', 'fa-layer-group'],
+    'schedule'   => ['Schedules', 'fa-calendar-days'],
+    'contracts'  => ['Contracts', 'fa-file-contract'],
+    'execution'  => ['Execution / Resources', 'fa-screwdriver-wrench'],
+    'report'     => ['Reports', 'fa-chart-column'],
+    'activity'   => ['Activities', 'fa-bolt'],
     'bidding'    => ['Bidding', 'fa-file-signature'],
     'finance_wip'=> ['WIP Report', 'fa-chart-pie'],
+    'boq'        => ['BOQ / SOV',  'fa-table'],
+    'drivers'    => ['Drivers / Qty', 'fa-gauge-high'],
     'files'      => ['Files',      'fa-folder-open'],
     'members'    => ['Team',       'fa-users'],
 ]; ?>
 <ul class="nav nav-tabs mb-3 border-bottom" id="projectTabs">
     <?php
         if ($isExternal) {
-            $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'photos', 'files'];
+            $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'photos', 'files', 'finance'];
             foreach (array_keys($tabList) as $key) {
                 if (!in_array($key, $allowedExternalTabs)) {
                     unset($tabList[$key]);
@@ -121,6 +129,9 @@ $tabList = [
     case 'contracts':  include __DIR__ . '/tabs/contracts_inline.php'; break;
     case 'boq':        include __DIR__ . '/tabs/boq_inline.php'; break;
     case 'finance':    
+        include __DIR__ . '/tabs/finance_inline.php'; 
+        break;
+    case 'finance_analytics':
         $budget = $budget_data;
         include __DIR__ . '/tabs/finance_analytics.php'; 
         break;
@@ -133,8 +144,9 @@ $tabList = [
     case 'change_management': include __DIR__ . '/tabs/change_management.php'; break;
     case 'meetings':   include __DIR__ . '/tabs/meetings.php'; break;
     case 'bidding':    include __DIR__ . '/tabs/bidding.php'; break;
-    case 'drawings':   include __DIR__ . '/tabs/drawings_inline.php'; break;
     case 'finance_wip': include __DIR__ . '/tabs/finance_wip.php'; break;
+    case 'drivers':     include __DIR__ . '/tabs/drivers_inline.php'; break;
+    case 'execution':   include __DIR__ . '/tabs/execution_inline.php'; break;
     default:           include __DIR__ . '/tabs/overview_inline.php'; break;
 endswitch; ?>
 </div>
@@ -184,7 +196,7 @@ endswitch; ?>
                 <label class="form-label small fw-semibold text-muted mb-1">Milestone</label>
                 <select id="newTaskMilestone" class="form-select form-select-sm">
                     <option value="">None</option>
-                    <?php foreach ($milestones as $ms): ?>
+                    <?php foreach ($milestones as $ms): if(!is_array($ms)) continue; ?>
                     <option value="<?= $ms['id'] ?>"><?= esc($ms['title']) ?></option>
                     <?php endforeach; ?>
                 </select>

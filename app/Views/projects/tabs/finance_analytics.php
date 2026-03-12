@@ -95,9 +95,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($budget_items)): ?>
+                            <?php if (empty($budget_items) && empty($change_orders)): ?>
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted small">No detailed budget line-items defined. Sum uses flat project budget.</td>
+                                <td colspan="7" class="text-center py-4 text-muted small">No detailed budget line-items or approved change orders defined. Sum uses flat project budget.</td>
                             </tr>
                             <?php else: ?>
                             <?php foreach ($budget_items as $item): ?>
@@ -125,9 +125,33 @@
                                 </td>
                             </tr>
                             <?php endforeach; ?>
+
+                            <?php foreach ($change_orders as $co): ?>
+                            <?php if ($co['status'] === 'approved'): ?>
+                            <tr class="table-success-light">
+                                <td class="ps-4">
+                                    <span class="badge bg-success text-white border small fw-normal">
+                                        CO-<?= esc($co['co_number']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold small">Approved Change Order: <?= esc($co['title']) ?></div>
+                                    <div class="smallest text-muted">Approved at: <?= date('M d, Y', strtotime($co['approved_at'])) ?></div>
+                                </td>
+                                <td class="text-end small">1.00</td>
+                                <td class="small">LS</td>
+                                <td class="text-end small"><?= number_format($co['amount'], 2) ?></td>
+                                <td class="text-end fw-bold small"><?= number_format($co['amount'], 2) ?></td>
+                                <td class="text-end pe-4 text-muted small">
+                                    <i class="fa-solid fa-lock" title="Change orders are locked once approved"></i>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php endforeach; ?>
+
                             <tr class="table-light">
-                                <td colspan="5" class="ps-4 fw-bold text-end small">Total SOV Value:</td>
-                                <td class="text-end fw-bold text-primary"><?= number_to_currency($budget['original_budget'], $budget['currency']) ?></td>
+                                <td colspan="5" class="ps-4 fw-bold text-end small">Revised Total Contract Value:</td>
+                                <td class="text-end fw-bold text-primary"><?= number_to_currency($budget['revised_budget'], $budget['currency']) ?></td>
                                 <td class="pe-4"></td>
                             </tr>
                             <?php endif; ?>

@@ -144,12 +144,25 @@ $counts = $subModel->statusCounts($project['id']);
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Description</label>
+                            <textarea id="subDescription" class="form-control" rows="3" placeholder="Provide detailed information about this submittal..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Attachments (Files / Photos)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa-solid fa-paperclip text-muted"></i></span>
+                                <input type="file" id="subFiles" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" capture="environment">
+                            </div>
+                            <div class="smallest text-muted mt-1">Select multiple files, or use your camera to capture photos.</div>
+                            <div id="subFilePreview" class="d-flex flex-wrap gap-2 mt-2"></div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitNewSubmittal()">
+                <button type="button" id="btnSubmitSubmittal" class="btn btn-primary" onclick="submitNewSubmittal()">
                     <i class="fa-solid fa-paper-plane me-1"></i> Submit
                 </button>
             </div>
@@ -158,6 +171,17 @@ $counts = $subModel->statusCounts($project['id']);
 </div>
 
 <script>
+document.getElementById('subFiles')?.addEventListener('change', function(e) {
+    const preview = document.getElementById('subFilePreview');
+    preview.innerHTML = '';
+    [...e.target.files].forEach(file => {
+        const div = document.createElement('div');
+        div.className = 'badge bg-light text-dark border p-2 d-flex align-items-center smallest';
+        div.innerHTML = `<i class="fa-solid fa-file me-2 text-muted"></i> ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        preview.appendChild(div);
+    });
+});
+
 function openNewSubmittalModal() {
     new bootstrap.Modal(document.getElementById('newSubmittalModal')).show();
 }
@@ -165,17 +189,28 @@ function openNewSubmittalModal() {
 function submitNewSubmittal() {
     const title = document.getElementById('subTitle').value.trim();
     const number = document.getElementById('subNumber').value.trim();
+    const btn = document.getElementById('btnSubmitSubmittal');
+
     if (!number) { alert('Submittal Number is required.'); return; }
     if (!title) { alert('Title is required.'); return; }
 
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Submitting...';
+
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
-    fd.append('submittal_number', document.getElementById('subNumber').value.trim());
+    fd.append('submittal_number', number);
     fd.append('title',            title);
     fd.append('type',             document.getElementById('subType').value);
     fd.append('spec_section',     document.getElementById('subSpec').value);
     fd.append('due_date',         document.getElementById('subDue').value);
     fd.append('assigned_to',      document.getElementById('subReviewer').value);
+    fd.append('description',      document.getElementById('subDescription').value);
+
+    const files = document.getElementById('subFiles').files;
+    for (let i = 0; i < files.length; i++) {
+        fd.append('attachments[]', files[i]);
+    }
 
     fetch(`/staging/public/projects/<?= $project['id'] ?>/submittals`, {
         method: 'POST', 
@@ -188,7 +223,15 @@ function submitNewSubmittal() {
             window.location.href = `/staging/public/index.php/submittals/${d.id}`;
         } else {
             alert(d.error || 'Could not create Submittal.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> Submit';
         }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('An error occurred while submitting.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> Submit';
     });
 }
 </script>

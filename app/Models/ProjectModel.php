@@ -21,7 +21,7 @@ class ProjectModel extends ErpModel
     public function withDetails(): static
     {
         return $this
-            ->select('projects.*, clients.company_name AS client_name, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS pm_name')
+            ->select('projects.*, projects.tenant_id, clients.company_name AS client_name, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS pm_name')
             ->join('clients', 'clients.id = projects.client_id', 'left')
             ->join('fs_users', 'fs_users.id = projects.pm_user_id', 'left');
     }

@@ -138,7 +138,7 @@ class Contracts extends BaseAppController
         $amend = $aModel->find($amendId);
         if ($amend) {
             $contract = (new ContractModel())->find($amend['contract_id']);
-            if ($contract && current_user_id() !== $contract['created_by']) {
+            if ($contract && $this->currentUser['id'] !== $contract['created_by']) {
                 \App\Models\NotificationModel::send(
                     $contract['created_by'],
                     'vo_approved',

@@ -19,21 +19,24 @@ class Areas extends BaseAppController
 
     public function index(int $projectId): string
     {
-        return view('projects/tabs/areas', [
-            'project_id' => $projectId,
-            'tree'       => $this->areas->getTree($projectId),
+        return view('projects/tabs/areas_inline', [
+            'project' => (new ProjectModel())->find($projectId),
         ]);
     }
 
     public function store(int $projectId)
     {
         $id = $this->areas->insert([
-            'project_id' => $projectId,
-            'parent_id'  => $this->request->getPost('parent_id') ?: null,
-            'name'       => $this->request->getPost('name'),
-            'type'       => $this->request->getPost('type') ?? 'other',
-            'description'=> $this->request->getPost('description') ?: null,
-            'sort_order' => (int)$this->request->getPost('sort_order'),
+            'project_id'   => $projectId,
+            'parent_id'    => $this->request->getPost('parent_id') ?: null,
+            'name'         => $this->request->getPost('name'),
+            'type'         => $this->request->getPost('type') ?? 'other',
+            'status'       => $this->request->getPost('status') ?? 'planning',
+            'start_date'   => $this->request->getPost('start_date') ?: null,
+            'end_date'     => $this->request->getPost('end_date') ?: null,
+            'turnover_date'=> $this->request->getPost('turnover_date') ?: null,
+            'description'  => $this->request->getPost('description') ?: null,
+            'sort_order'   => (int)$this->request->getPost('sort_order'),
         ]);
         return $this->response->setJSON(['success' => true, 'id' => $id, 'tree' => $this->areas->getTree($projectId)]);
     }
@@ -41,9 +44,14 @@ class Areas extends BaseAppController
     public function update(int $id)
     {
         $this->areas->update($id, [
-            'name'      => $this->request->getPost('name'),
-            'type'      => $this->request->getPost('type'),
-            'parent_id' => $this->request->getPost('parent_id') ?: null,
+            'name'          => $this->request->getPost('name'),
+            'type'          => $this->request->getPost('type'),
+            'status'        => $this->request->getPost('status'),
+            'start_date'    => $this->request->getPost('start_date') ?: null,
+            'end_date'      => $this->request->getPost('end_date') ?: null,
+            'turnover_date' => $this->request->getPost('turnover_date') ?: null,
+            'parent_id'     => $this->request->getPost('parent_id') ?: null,
+            'description'   => $this->request->getPost('description') ?: null,
         ]);
         $area = $this->areas->find($id);
         return $this->response->setJSON(['success' => true, 'tree' => $this->areas->getTree($area['project_id'])]);

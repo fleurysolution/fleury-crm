@@ -10,6 +10,8 @@ class InventoryTransactionModel extends ErpModel
     protected $useSoftDeletes = false; // Immutable log
 
     protected $allowedFields = [
+        'tenant_id',
+        'branch_id',
         'item_id',
         'location_id',
         'project_id_destination',

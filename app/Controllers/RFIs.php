@@ -9,7 +9,7 @@ use App\Models\ProjectModel;
 class RFIs extends BaseAppController
 {
     protected RfiModel $rfiModel;
-    protected RfiReplyModel $replyModel;
+    protected RFIResponseModel $replyModel;
     protected ProjectModel $projectModel;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request,
@@ -124,8 +124,8 @@ class RFIs extends BaseAppController
         $id = $this->replyModel->insert([
             'rfi_id' => $rfiId,
             'user_id' => session('user_id'),
-            'body' => $this->request->getPost('body'),
-            'is_official' => $this->request->getPost('is_official') ? 1 : 0
+            'reply' => $this->request->getPost('body'),
+            'is_official_answer' => $this->request->getPost('is_official') ? 1 : 0
         ]);
 
         return $this->response->setJSON(['success' => true, 'reply_id' => $id]);

@@ -245,7 +245,7 @@ $routes->group('approvals', ['filter' => 'auth'], function ($routes) {
 // ── Change Management ────────────────────────────────────────────────────────
 $routes->group('change-orders', ['filter' => 'auth'], function ($routes) {
     $routes->post('events/store/(:num)', 'ChangeOrders::storeEvent/$1');
-    $routes->get('convert/(:num)',       'ChangeOrders::convertToCO/$1');
+    $routes->post('convert/(:num)',      'ChangeOrders::convertToCO/$1');
     $routes->post('approve/(:num)',      'ChangeOrders::approveCO/$1');
 });
 
@@ -294,6 +294,11 @@ $routes->group('projects', ['filter' => 'auth'], function ($routes) {
     $routes->post('(:num)/members',              'Projects::addMember/$1');
     $routes->get('(:num)/areas',                 'Areas::index/$1');
     $routes->post('(:num)/areas',                'Areas::store/$1');
+    $routes->get('(:num)/drivers',               'ProjectDrivers::index/$1');
+    $routes->post('(:num)/drivers',              'ProjectDrivers::store/$1');
+    $routes->post('(:num)/contracts',            'Contracts::store/$1');
+    $routes->post('(:num)/setup/staffing',       'ProjectResources::storeStaffing/$1');
+    $routes->post('(:num)/setup/equipment',      'ProjectResources::storeEquipment/$1');
     $routes->post('(:num)/phases',               'Projects::storePhase/$1');
     $routes->post('(:num)/milestones',           'Projects::storeMilestone/$1');
 });
@@ -310,6 +315,22 @@ $routes->post('tasks/(:num)/delete',             'Tasks::delete/$1',  ['filter' 
 // Areas — global AJAX endpoints
 $routes->post('areas/(:num)/update',             'Areas::update/$1',  ['filter' => 'auth']);
 $routes->post('areas/(:num)/delete',             'Areas::delete/$1',  ['filter' => 'auth']);
+$routes->post('drivers/(:num)/update',           'ProjectDrivers::update/$1', ['filter' => 'auth']);
+$routes->post('drivers/(:num)/delete',           'ProjectDrivers::delete/$1', ['filter' => 'auth']);
+$routes->post('setup/staffing/(:num)/update',    'ProjectResources::updateStaffing/$1', ['filter' => 'auth']);
+$routes->post('setup/staffing/(:num)/delete',    'ProjectResources::deleteStaffing/$1', ['filter' => 'auth']);
+$routes->post('setup/equipment/(:num)/update',   'ProjectResources::updateEquipment/$1', ['filter' => 'auth']);
+$routes->post('setup/equipment/(:num)/delete',   'ProjectResources::deleteEquipment/$1', ['filter' => 'auth']);
+
+// Contracts — global AJAX & detail endpoints
+$routes->get('contracts/(:num)',                 'Contracts::show/$1',    ['filter' => 'auth']);
+$routes->post('contracts/(:num)/status',         'Contracts::updateStatus/$1', ['filter' => 'auth']);
+$routes->post('contracts/(:num)/amend',          'Contracts::amend/$1',   ['filter' => 'auth']);
+$routes->post('contracts/amendments/(:num)/approve', 'Contracts::approveAmendment/$1', ['filter' => 'auth']);
+$routes->post('contracts/amendments/(:num)/reject',  'Contracts::rejectAmendment/$1',  ['filter' => 'auth']);
+$routes->post('contracts/(:num)/sign',           'Contracts::signContract/$1', ['filter' => 'auth']);
+$routes->get('contracts/(:num)/pdf',             'Contracts::downloadPdf/$1',  ['filter' => 'auth']);
+$routes->post('contracts/(:num)/delete',         'Contracts::delete/$1',  ['filter' => 'auth']);
 
 // Milestones — global AJAX endpoints
 $routes->post('milestones/(:num)/update',        'Projects::updateMilestone/$1', ['filter' => 'auth']);

@@ -69,8 +69,22 @@ foreach ($sovLines as $line) {
 
 // Line 1:
 $line1 = $originalContractSum;
-// Line 2: (No Change Orders yet)
+
+// --- Calculate Change Orders ---
 $line2 = 0.00; 
+foreach ($changeOrders as $co) {
+    $id = $co['id'];
+    $key = 'co_' . $id;
+    $line2 += (float)$co['amount'];
+    
+    $prev = isset($previousProgress[$key]) ? (float)$previousProgress[$key] : 0.00;
+    $thisWork = isset($mappedItems[$key]) ? (float)$mappedItems[$key]['work_completed_this_period'] : 0.00;
+    $thisMat  = isset($mappedItems[$key]) ? (float)$mappedItems[$key]['materials_presently_stored'] : 0.00;
+    
+    $totalPrev += $prev;
+    $totalThisPeriod += $thisWork;
+    $totalStored += $thisMat;
+}
 // Line 3:
 $line3 = $line1 + $line2;
 // Line 4: Total Completed and Stored
@@ -294,17 +308,47 @@ $line9 = $line3 - $line6;
             <td><?= number_format($rowRetainage, 2) ?></td>
         </tr>
         <?php endforeach; ?>
+
+        <?php if (!empty($changeOrders)): ?>
+            <tr><td colspan="10" class="bold text-left" style="background-color:#eee; padding-left:10px;">APPROVED CHANGE ORDERS</td></tr>
+            <?php foreach ($changeOrders as $co): 
+                $id = $co['id'];
+                $key = 'co_' . $id;
+                $scheduled = (float)$co['amount'];
+                $prev = isset($previousProgress[$key]) ? (float)$previousProgress[$key] : 0.00;
+                $thisWork = isset($mappedItems[$key]) ? (float)$mappedItems[$key]['work_completed_this_period'] : 0.00;
+                $thisMat  = isset($mappedItems[$key]) ? (float)$mappedItems[$key]['materials_presently_stored'] : 0.00;
+                
+                $toDate = $prev + $thisWork + $thisMat;
+                $pct = $scheduled > 0 ? ($toDate / $scheduled) * 100 : 0;
+                $balance = $scheduled - $toDate;
+                $rowRetainage = $toDate * ($retainagePct / 100);
+            ?>
+            <tr>
+                <td class="col-a">CO#<?= esc($co['co_number']) ?></td>
+                <td class="col-b"><?= esc($co['title']) ?></td>
+                <td><?= number_format($scheduled, 2) ?></td>
+                <td><?= number_format($prev, 2) ?></td>
+                <td><?= number_format($thisWork, 2) ?></td>
+                <td><?= number_format($thisMat, 2) ?></td>
+                <td><?= number_format($toDate, 2) ?></td>
+                <td class="text-center"><?= number_format($pct, 2) ?>%</td>
+                <td><?= number_format($balance, 2) ?></td>
+                <td><?= number_format($rowRetainage, 2) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </tbody>
     <tfoot>
         <tr class="totals-row">
             <td colspan="2" class="text-right">GRAND TOTALS:</td>
-            <td>$<?= number_format($originalContractSum, 2) ?></td>
+            <td>$<?= number_format($line3, 2) ?></td>
             <td>$<?= number_format($totalPrev, 2) ?></td>
             <td>$<?= number_format($totalThisPeriod, 2) ?></td>
             <td>$<?= number_format($totalStored, 2) ?></td>
             <td>$<?= number_format($line4, 2) ?></td>
-            <td class="text-center"><?= $originalContractSum > 0 ? number_format(($line4 / $originalContractSum) * 100, 2) : '0.00' ?>%</td>
-            <td>$<?= number_format($originalContractSum - $line4, 2) ?></td>
+            <td class="text-center"><?= $line3 > 0 ? number_format(($line4 / $line3) * 100, 2) : '0.00' ?>%</td>
+            <td>$<?= number_format($line3 - $line4, 2) ?></td>
             <td>$<?= number_format($line5, 2) ?></td>
         </tr>
     </tfoot>

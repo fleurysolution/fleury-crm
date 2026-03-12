@@ -95,7 +95,7 @@
                 <td class="project-details">
                     <h3>Project Details</h3>
                     <div><strong><?= esc($project['title']) ?></strong></div>
-                    <div><?= esc($project['address']) ?? 'Address Not Provided' ?></div>
+                    <div><?= esc($project['address'] ?? 'Address Not Provided') ?></div>
                 </td>
             </tr>
         </table>

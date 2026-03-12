@@ -110,4 +110,62 @@ class BOQ extends BaseAppController
         fclose($out);
         exit;
     }
+
+    /**
+     * POST /projects/:id/boq/import
+     * Trigger the Python helper to parse the master excel and import into BOQ.
+     */
+    public function import(int $projectId): \CodeIgniter\HTTP\Response
+    {
+        $filePath = 'c:\\wamp64\\www\\staging\\old_files\\Estimate_Master_SHARE_v1.xlsx';
+        if (!file_exists($filePath)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Master Excel file not found.']);
+        }
+
+        $pythonPath = 'python';
+        $scriptPath = 'c:\\wamp64\\www\\staging\\app\\Helpers\\import_boq_helper.py';
+        
+        $command = "python \"$scriptPath\" \"$filePath\"";
+        $output = shell_exec($command);
+        
+        $lines = explode("\n", trim($output));
+        $jsonStr = end($lines); 
+        $data = json_decode($jsonStr, true);
+
+        if (!$data || isset($data['error'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to parse Excel: ' . ($data['error'] ?? 'Unknown error')]);
+        }
+
+        $boqModel = new BOQItemModel();
+        $boqModel->where('project_id', $projectId)->delete();
+
+        $codeToId = [];
+        $importCount = 0;
+        
+        foreach ($data as $item) {
+            $parentCode = $item['parent_code'] ?? null;
+            $parent_id  = null;
+            if ($parentCode && isset($codeToId[$parentCode])) {
+                $parent_id = $codeToId[$parentCode];
+            }
+
+            $insertData = [
+                'project_id'   => $projectId,
+                'parent_id'    => $parent_id,
+                'item_code'    => $item['item_code'] ?? null,
+                'description'  => $item['description'] ?? '',
+                'unit'         => $item['unit'] ?? null,
+                'quantity'     => $item['quantity'] ?? 0,
+                'unit_rate'    => $item['unit_rate'] ?? 0,
+                'total_amount' => $item['total_amount'] ?? 0,
+                'is_section'   => $item['is_section'] ?? 0,
+                'sort_order'   => $importCount++,
+            ];
+
+            $newId = $boqModel->insert($insertData);
+            $codeToId[$item['item_code']] = $newId;
+        }
+
+        return $this->response->setJSON(['success' => true, 'count' => $importCount]);
+    }
 }

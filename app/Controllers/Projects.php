@@ -13,6 +13,7 @@ use App\Models\UserModel;
 use App\Models\ChangeEventModel;
 use App\Models\ChangeOrderModel;
 use App\Models\MeetingModel;
+use App\Models\ContractModel;
 use App\Models\BudgetModel;
 use App\Models\BidPackageModel;
 use App\Models\BidModel;
@@ -34,6 +35,7 @@ class Projects extends BaseAppController
     protected ChangeEventModel $events;
     protected ChangeOrderModel $orders;
     protected MeetingModel $meetings_model;
+    protected ContractModel $contracts;
     protected BudgetModel $budget_model;
     protected BidPackageModel $bid_packages;
     protected BidModel           $bid_model;
@@ -59,6 +61,7 @@ class Projects extends BaseAppController
         $this->events     = new ChangeEventModel();
         $this->orders     = new ChangeOrderModel();
         $this->meetings_model = new MeetingModel();
+        $this->contracts      = new ContractModel();
         $this->budget_model   = new BudgetModel();
         $this->bid_packages   = new BidPackageModel();
         $this->bid_model      = new BidModel();
@@ -213,14 +216,15 @@ class Projects extends BaseAppController
             'submittals' => $submittals, // Added
             'drawings'   => $drawings, // Added
             'photos'     => $photos, // Added
-            'change_events' => ($tab === 'change_management') ? $this->events->getForProject($id, session()->get('tenant_id')) : [],
-            'change_orders' => ($tab === 'change_management') ? $this->orders->getForProject($id, session()->get('tenant_id')) : [],
-            'meetings'      => ($tab === 'meetings') ? $this->meetings_model->getForProject($id, session()->get('tenant_id')) : [],
-            'budget_data'   => ($tab === 'finance' || $tab === 'finance_wip') ? $this->budget_model->getProjectFinancials($id, session()->get('tenant_id')) : null,
-            'bid_packages'  => ($tab === 'bidding') ? $this->bid_packages->getForProject($id, session()->get('tenant_id')) : [],
+            'change_events' => ($tab === 'change_management') ? $this->events->getForProject($id, $project['tenant_id']) : [],
+            'change_orders' => ($tab === 'change_management' || $tab === 'finance') ? $this->orders->getForProject($id, $project['tenant_id']) : [],
+            'project_contracts' => ($tab === 'change_management') ? $this->contracts->forProject($id) : [],
+            'meetings'      => ($tab === 'meetings') ? $this->meetings_model->getForProject($id, $project['tenant_id']) : [],
+            'budget_data'   => ($tab === 'finance' || $tab === 'finance_wip') ? $this->budget_model->getProjectFinancials($id, $project['tenant_id']) : null,
+            'bid_packages'  => ($tab === 'bidding') ? $this->bid_packages->getForProject($id, $project['tenant_id']) : [],
             'bids_per_package' => ($tab === 'bidding') ? $this->getBidsPerPackage($id) : [],
-            'drawings_list' => ($tab === 'drawings') ? $this->drawings->where('project_id', $id)->where('tenant_id', session()->get('tenant_id'))->findAll() : [],
-            'budget_items'  => ($tab === 'finance') ? $this->budget_items_model->getForProject($id, session()->get('tenant_id')) : [],
+            'drawings_list' => ($tab === 'drawings') ? $this->drawings->where('project_id', $id)->where('tenant_id', $project['tenant_id'])->findAll() : [],
+            'budget_items'  => ($tab === 'finance') ? $this->budget_items_model->getForProject($id, $project['tenant_id']) : [],
             'cost_codes'    => ($tab === 'finance') ? $this->cost_codes_model->forProject($id) : [],
         ]);
     }
@@ -558,7 +562,7 @@ class Projects extends BaseAppController
         $packages = $this->bid_packages->where('project_id', $projectId)->findAll();
         $bids_per_package = [];
         foreach ($packages as $pkg) {
-            $bids_per_package[$pkg['id']] = $this->bids->getForPackage($pkg['id']);
+            $bids_per_package[$pkg['id']] = $this->bid_model->getForPackage($pkg['id']);
         }
         return $bids_per_package;
     }

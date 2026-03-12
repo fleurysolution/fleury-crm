@@ -55,8 +55,15 @@ class Finance extends BaseAppController
         $existing = $pModel->where('project_id', $projectId)->findAll();
         $nextAppNo = count($existing) + 1;
 
+        $project = (new ProjectModel())->find($projectId);
+        if (!$project) {
+            return redirect()->back()->with('error', 'Project not found.');
+        }
+
         $payAppId = $pModel->insert([
             'project_id'           => $projectId,
+            'tenant_id'            => $project['tenant_id'],
+            'branch_id'            => $project['branch_id'],
             'application_no'       => $nextAppNo,
             'period_to'            => $this->request->getPost('period_to'),
             'status'               => 'Draft',
@@ -84,12 +91,20 @@ class Finance extends BaseAppController
         
         // Get Master SOV lines
         $sovLines = $sModel->forProject($payApp['project_id']);
+
+        // Get Approved Change Orders
+        $coModel = new \App\Models\ChangeOrderModel();
+        $changeOrders = $coModel->where(['project_id' => $payApp['project_id'], 'status' => 'approved'])->findAll();
         
         // Get already saved progress for THIS app (if any)
         $savedItems = $piModel->where('pay_app_id', $id)->findAll();
         $mappedItems = [];
         foreach ($savedItems as $item) {
-            $mappedItems[$item['sov_item_id']] = $item;
+            if ($item['sov_item_id']) {
+                $mappedItems[$item['sov_item_id']] = $item;
+            } elseif ($item['change_order_id']) {
+                $mappedItems['co_' . $item['change_order_id']] = $item;
+            }
         }
 
         // Get Previous Applications (to calculate Previous Work Completed)
@@ -112,6 +127,7 @@ class Finance extends BaseAppController
             'project'          => $project,
             'payApp'           => $payApp,
             'sovLines'         => $sovLines,
+            'changeOrders'     => $changeOrders,
             'mappedItems'      => $mappedItems,
             'previousProgress' => $previousProgress
         ]);
@@ -135,12 +151,27 @@ class Finance extends BaseAppController
         $workPerLine = $this->request->getPost('work_completed') ?? [];
         $matPerLine  = $this->request->getPost('materials_stored') ?? [];
         
+        $coWorkPerLine = $this->request->getPost('co_work_completed') ?? [];
+        $coMatPerLine  = $this->request->getPost('co_materials_stored') ?? [];
+
         $insertData = [];
         foreach ($workPerLine as $sovItemId => $amountComp) {
             $mat = isset($matPerLine[$sovItemId]) ? (float)$matPerLine[$sovItemId] : 0.00;
             $insertData[] = [
                 'pay_app_id'                 => $id,
                 'sov_item_id'                => $sovItemId,
+                'change_order_id'            => null,
+                'work_completed_this_period' => (float)$amountComp,
+                'materials_presently_stored' => $mat
+            ];
+        }
+
+        foreach ($coWorkPerLine as $coId => $amountComp) {
+            $mat = isset($coMatPerLine[$coId]) ? (float)$coMatPerLine[$coId] : 0.00;
+            $insertData[] = [
+                'pay_app_id'                 => $id,
+                'sov_item_id'                => null,
+                'change_order_id'            => $coId,
                 'work_completed_this_period' => (float)$amountComp,
                 'materials_presently_stored' => $mat
             ];
@@ -192,10 +223,20 @@ class Finance extends BaseAppController
         
         $project = (new ProjectModel())->find($payApp['project_id']);
         $sovLines = $sModel->forProject($payApp['project_id']);
+
+        // Get Approved Change Orders
+        $coModel = new \App\Models\ChangeOrderModel();
+        $changeOrders = $coModel->where(['project_id' => $payApp['project_id'], 'status' => 'approved'])->findAll();
         
         $savedItems = $piModel->where('pay_app_id', $id)->findAll();
         $mappedItems = [];
-        foreach ($savedItems as $item) $mappedItems[$item['sov_item_id']] = $item;
+        foreach ($savedItems as $item) {
+            if ($item['sov_item_id']) {
+                $mappedItems[$item['sov_item_id']] = $item;
+            } elseif ($item['change_order_id']) {
+                $mappedItems['co_' . $item['change_order_id']] = $item;
+            }
+        }
 
         $previousApps = $pModel->where('project_id', $payApp['project_id'])
                                ->where('application_no <', $payApp['application_no'])
@@ -206,9 +247,15 @@ class Finance extends BaseAppController
         if (!empty($prevAppIds)) {
             $prevItems = $piModel->whereIn('pay_app_id', $prevAppIds)->findAll();
             foreach ($prevItems as $pi) {
-                $sid = $pi['sov_item_id'];
-                if (!isset($previousProgress[$sid])) $previousProgress[$sid] = 0;
-                $previousProgress[$sid] += $pi['work_completed_this_period'] + $pi['materials_presently_stored'];
+                if ($pi['sov_item_id']) {
+                    $sid = $pi['sov_item_id'];
+                    if (!isset($previousProgress[$sid])) $previousProgress[$sid] = 0;
+                    $previousProgress[$sid] += $pi['work_completed_this_period'] + $pi['materials_presently_stored'];
+                } elseif ($pi['change_order_id']) {
+                    $key = 'co_' . $pi['change_order_id'];
+                    if (!isset($previousProgress[$key])) $previousProgress[$key] = 0;
+                    $previousProgress[$key] += $pi['work_completed_this_period'] + $pi['materials_presently_stored'];
+                }
             }
         }
 
@@ -216,6 +263,7 @@ class Finance extends BaseAppController
             'project'          => $project,
             'payApp'           => $payApp,
             'sovLines'         => $sovLines,
+            'changeOrders'     => $changeOrders,
             'mappedItems'      => $mappedItems,
             'previousProgress' => $previousProgress
         ]);

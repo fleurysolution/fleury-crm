@@ -21,7 +21,8 @@ class Meetings extends BaseAppController
 
     public function store(int $projectId)
     {
-        $tenantId = session()->get('tenant_id');
+        $project   = $this->projects->find($projectId);
+        $tenantId  = session()->get('tenant_id') ?: ($project['tenant_id'] ?? null);
         
         $data = [
             'tenant_id'    => $tenantId,
