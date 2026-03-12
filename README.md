@@ -1,69 +1,133 @@
-# CodeIgniter 4 Application Starter
+# BPMS247 - User Workflow Manual
 
-## What is CodeIgniter?
+Welcome to the comprehensive workflow guide for the BPMS247 construction management suite. This document outlines standard administrative and field procedures for the next-generation project management platform.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+## 1. Enterprise Hierarchy Setup
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+Before managing projects, you must define your organization's geographic and operational structure.
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+### 1.1 Regions & Offices
+1.  **Define Regions**: Navigate to **Settings** -> **Branch Structure** -> **Regions**. Create high-level areas (e.g., Northwest Division).
+2.  **Establish Branches**: Go to **Settings** -> **Branch Structure** -> **Offices**. Link physical office locations to your regions.
+3.  **Divisions**: (Optional) For specialized teams, use the **Divisions** setting to segment branches further.
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+### 1.2 User Onboarding
+1.  Go to **Management** -> **Users**.
+2.  Click **Create User**.
+3.  **Branch Assignment**: Select the primary office the user belongs to. This enforces data isolation.
+4.  **Role Assignment**:
+    *   **Project Manager**: Full operational control over assigned projects.
+    *   **Field Worker**: Restricted to time logging, site diaries, and task updates.
+    *   **Client**: View-only access to specific project progress and financials.
 
-## Installation & updates
+## 2. Project Management & Advanced Scheduling
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+BPMS247 uses a Primavera P6-style management engine to "Drive the Project" using the Critical Path Method (CPM).
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+### 2.1 Project Setup
+1.  Navigate to **Projects** -> **Create New**.
+2.  Assign to a **Branch** and fill in basic project details (Budget, Timeline).
+3.  Define **Phases** and **Milestones** to structure your project logic.
 
-## Setup
+### 2.2 Advanced Scheduling (CPM)
+1.  **XER/XML Import**: Upload schedules directly from Primavera P6 via the **Gantt** tab.
+2.  **Logic Linking**: Define Task dependencies (Finish-to-Start, etc.) and add **Lag/Lead** times.
+3.  **CPM Recalculation**: Use the "Recalculate Schedule" button to update the critical path after any change in duration or logic.
+4.  **Baselines**: Capture snapshots of your schedule to track variance against the original plan.
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+## 3. Financial Workflows
 
-## Important Change with index.php
+### 3.1 Advanced Estimating
+1.  **Multi-Tab Estimates**: Manage your detailed breakdown, Risks, and Clarifications in a single interface.
+2.  **General Conditions (GCs)**: Input staff and site overhead costs separately to ensure accurate project pricing.
+3.  **Risk Analysis**: Add contingency and high-risk factors to your budget summary.
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+### 3.2 Invoicing & Pay Apps
+1.  **AIA Payment Applications**: Generate G702/G703 style progress billings directly from your BOQ/SOV.
+2.  **Change Order Integration**: Approved change orders are automatically integrated into the revised budget and payment applications.
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## 4. Intelligent Preconstruction & Procurement
 
-**Please** read the user guide for a better explanation of how CI4 works!
+Surpass standard task management by linking procurement directly to your project timeline.
 
-## Repository Management
+### 4.1 Procurement-Driven Scheduling
+1.  **Material Tracking**: Register long-lead items in the **Procurement** tab.
+2.  **Schedule Sync**: Link material `On-Site` dates to project tasks. If delivery is delayed, the CPM engine will automatically shift the project schedule.
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+### 4.2 Automated Bid Leveling
+1.  **Bid Matrix**: Compare subcontractor quotes side-by-side against your target budget.
+2.  **Scope Gap Analysis**: The system automatically flags "Missing" or "Outlier" line items to ensure bid completeness.
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+## 5. "First-Time Quality" & Smart Handover
 
-## Server Requirements
+Enforce quality from day one and deliver a superior digital experience to the client.
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+### 5.1 Preventative Quality Control (QC)
+1.  **Integrated Checklists**: PMs define mandatory QA checks for critical task categories.
+2.  **Verification**: Field teams must complete these checklists (often requiring photo proof) before a task can be marked "Done."
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+### 5.2 Smart Punch List
+1.  **Mobile-First Capture**: Record defects in real-time using a mobile browser.
+2.  **Geotagging**: Every punch item automatically pins its precise GPS location.
+3.  **Photo Evidence**: Attach "Before" and "After" photos for absolute accountability.
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+### 5.3 Digital Handover Vault
+1.  **Asset Registry**: Track every major piece of equipment (AHUs, Pumps, Switchgear) in the vault.
+2.  **Warranty Tracking**: Store warranty certificates and O&M manuals electronically.
+3.  **QR Code Labels**: Generate and print unique labels for physical equipment. Scanning these in the field provides instant access to all asset documentation.
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+## 6. Field Production & Execution
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+### 6.1 Area Management & Drivers
+1.  Divide projects into **Zones** or **Buildings** to track granular progress.
+2.  Define **Quantity Drivers** (e.g., Linear Feet of Pipe, Cubic Yards of Concrete) to measure performance against baseline metrics.
+
+### 6.2 Site Diaries & Progress Reports
+1.  **Daily Logs**: Capture weather, manpower, and equipment details.
+2.  **Geotagged Progress Photos**: Upload site photos with captions; these are automatically pulled into the **Executive Progress Report**.
+3.  **PDF Distribution**: Generate professional, branded progress reports for stakeholders with one click.
+
+## 7. Elite Operational & Accounting Control
+
+BPMS247 provides a closed-loop system that links field progress directly to financial performance.
+
+### 7.1 Real-Time Production Dashboard
+1.  Navigate to **Projects** -> **[Select Project]** -> **Production & Control**.
+2.  **Performance Metrics**:
+    *   **CPI (Cost Performance Index)**: Measure cost efficiency against the budget.
+    *   **SPI (Schedule Performance Index)**: Track schedule adherence based on earned value.
+    *   **Labor Efficiency**: Compare actual labor hours against estimated production rates.
+3.  **BOQ Production Tracking**: View granular progress for every line item in the Bill of Quantities.
+
+### 7.2 Linking Field Work to Financials
+1.  **Site Diary Entry**: When logging field work, select the relevant **BOQ Item**.
+2.  **Quantity Reporting**: Enter the physical quantity completed.
+3.  **Automated Updates**: Upon diary approval, the system automatically updates the project's actual quantities and financial metrics.
+
+## 8. Enterprise Cybersecurity Hardening
+
+Our multi-layered security suite ensures your project data remains protected against modern threats.
+
+### 8.1 Identity & Access
+1.  **Multi-Factor Authentication (MFA)**: Users are required to verify their identity via TOTP (e.g., Google Authenticator) for critical actions or logins.
+2.  **Session Hardening**: The system uses session pinning and IP-bound verification to prevent unauthorized access.
+3.  **Brute Force Protection**: Accounts are automatically locked for 15 minutes after 5 failed login attempts.
+
+### 8.2 Security Auditing
+1.  **Security Logs**: Administrators can view real-time security events in **Settings** -> **Cybersecurity**.
+2.  **Audit Trail**: Every significant action within the system (data edits, project changes) is logged with a permanent timestamp and user ID.
+
+## 9. Feature Management & Permissions
+
+Customize your experience by enabling only the modules your organization requires.
+
+### 9.1 Global Module Toggles
+1.  Go to **Settings** -> **Modules**.
+2.  Use the **Construction & Controls** toggles to enable or disable features like the P6 Scheduler or Production Control globally.
+
+### 9.2 Granular Permissions
+1.  **Role Configuration**: Define access at a granular level (e.g., allow a user to view Production metrics but not edit Schedules).
+2.  **Inheritance**: Permissions can be assigned directly to users or inherited via roles.
+
+***
+_Visit the [Developer Manual](developer_manual.md) for technical integration and API details._
