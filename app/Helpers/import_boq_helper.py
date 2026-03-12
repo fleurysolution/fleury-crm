@@ -36,13 +36,15 @@ def parse_excel(file_path):
         # Skip literal header rows
         if code.lower() == 'code' or desc.lower() == 'description':
             continue
-        # Divisions end in 00 00 (e.g., 03 00 00)
-        # Subdivisions end in 00 (e.g., 03 10 00)
+        # CSI Code Parsing (assuming XX XX XX format)
         is_section = 0
         parent_code = None
+        csi_div = None
         
-        # Clean code for parent lookup (e.g., "03 10 00" -> parent "03 00 00")
         parts = code.split()
+        if len(parts) >= 1:
+            csi_div = parts[0] # Division (e.g., 03)
+            
         if len(parts) == 3:
             if parts[1] == '00' and parts[2] == '00':
                 is_section = 1
@@ -54,9 +56,10 @@ def parse_excel(file_path):
                 is_section = 0
                 parent_code = parts[0] + " " + parts[1] + " 00"
         
-        # If amount is 0 and it looks like a header, force is_section
+        # If amount is 0 and it looks like a header (all caps or trailing zeroes), force is_section
         if amount == 0 and not is_section:
-             is_section = 1
+             if desc.isupper() or len(parts) < 3:
+                is_section = 1
              
         items.append({
             'item_code': code,
@@ -64,6 +67,7 @@ def parse_excel(file_path):
             'total_amount': amount,
             'is_section': is_section,
             'parent_code': parent_code,
+            'csi_division': csi_div,
             'quantity': 1 if not is_section else 0,
             'unit_rate': amount if not is_section else 0,
             'unit': 'LS' if not is_section else ''

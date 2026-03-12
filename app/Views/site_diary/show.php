@@ -72,7 +72,7 @@
                                     <option value="delivery" <?= $it['type']==='delivery'?'selected':'' ?>>Delivery</option>
                                 </select>
                             </div>
-                            <div class="col-md-7">
+                            <div class="col-md-5">
                                 <input type="text" name="item_description[]" class="form-control form-control-sm border-0 bg-light" value="<?= esc($it['description']) ?>">
                             </div>
                             <div class="col-md-2">
@@ -82,6 +82,17 @@
                                     <option value="<?= $a['id'] ?>" <?= $it['area_id']===$a['id']?'selected':'' ?>><?= esc($a['name']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group input-group-sm">
+                                    <select name="item_boq_item_id[]" class="form-select border-0 bg-light" style="width:65%;">
+                                        <option value="">Link BOQ…</option>
+                                        <?php foreach ($boq as $b): ?>
+                                        <option value="<?= $b['id'] ?>" <?= $it['boq_item_id']===$b['id']?'selected':'' ?>><?= esc($b['item_code'] . ' - ' . substr($b['description'], 0, 20)) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <input type="number" step="0.01" name="item_quantity_done[]" class="form-control border-0 bg-light" value="<?= $it['quantity_done'] ?>" placeholder="Qty">
+                                </div>
                             </div>
                             <div class="col-md-1 text-end">
                                 <button type="button" class="btn btn-sm text-danger mt-1 p-0" onclick="this.closest('.item-row').remove()"><i class="fa-solid fa-xmark"></i></button>
@@ -136,7 +147,7 @@
                 <option value="delivery">Delivery</option>
             </select>
         </div>
-        <div class="col-md-7">
+        <div class="col-md-5">
             <input type="text" name="item_description[]" class="form-control form-control-sm border-0 bg-light" placeholder="Describe progress…">
         </div>
         <div class="col-md-2">
@@ -146,6 +157,17 @@
                 <option value="<?= $a['id'] ?>"><?= esc($a['name']) ?></option>
                 <?php endforeach; ?>
             </select>
+        </div>
+        <div class="col-md-3">
+            <div class="input-group input-group-sm">
+                <select name="item_boq_item_id[]" class="form-select border-0 bg-light" style="width:65%;">
+                    <option value="">Link BOQ…</option>
+                    <?php foreach ($boq as $b): ?>
+                    <option value="<?= $b['id'] ?>"><?= esc($b['item_code'] . ' - ' . substr($b['description'], 0, 20)) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input type="number" step="0.01" name="item_quantity_done[]" class="form-control border-0 bg-light" placeholder="Qty">
+            </div>
         </div>
         <div class="col-md-1 text-end">
              <button type="button" class="btn btn-sm text-danger mt-1 p-0" onclick="this.closest('.item-row').remove()"><i class="fa-solid fa-xmark"></i></button>
@@ -176,11 +198,15 @@ function saveDiary() {
     const types = document.getElementsByName('item_type[]');
     const descs = document.getElementsByName('item_description[]');
     const areas = document.getElementsByName('item_area_id[]');
+    const boqs  = document.getElementsByName('item_boq_item_id[]');
+    const qtys  = document.getElementsByName('item_quantity_done[]');
 
     for(let i=0; i<descs.length; i++) {
         fd.append('item_type[]', types[i].value);
         fd.append('item_description[]', descs[i].value);
         fd.append('item_area_id[]', areas[i].value);
+        fd.append('item_boq_item_id[]', boqs[i].value);
+        fd.append('item_quantity_done[]', qtys[i].value);
     }
 
     fetch('<?= site_url("projects/{$project['id']}/site-diary/{$diary['id']}/update") ?>', {

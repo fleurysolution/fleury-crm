@@ -123,8 +123,9 @@ class Tasks extends BaseAppController
         $attachments  = $this->attachments->forTask($id);
         $checklists   = $this->checklists->forTask($id);
         $taskCollabs  = $this->collaborators->getCollaborators($id);
+        $qaChecklists = (new \App\Models\QaChecklistModel())->forTask($id);
         
-        $users = model(UserModel::class)->select('id, CONCAT(first_name, " ", last_name) AS name, email')->findAll();
+        $users = model(UserModel::class)->select('id, CONCAT(fs_users.first_name, " ", fs_users.last_name) AS name, email')->findAll();
 
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
@@ -133,6 +134,7 @@ class Tasks extends BaseAppController
                 'comments'      => $comments,
                 'attachments'   => $attachments,
                 'checklists'    => $checklists,
+                'qa_checklists' => $qaChecklists,
                 'collaborators' => $taskCollabs,
             ]);
         }
@@ -283,6 +285,24 @@ class Tasks extends BaseAppController
             return $this->response->setJSON(['success' => true]);
         }
 
+        return $this->response->setJSON(['success' => false]);
+    }
+
+    // ── QA CHECKLIST TOGGLE ─────────────────────────────────────────────
+    public function qaToggle(int $taskId)
+    {
+        $itemId = (int)$this->request->getPost('item_id');
+        $model  = new \App\Models\QaChecklistModel();
+        $item   = $model->find($itemId);
+        
+        if ($item && $item['task_id'] == $taskId) {
+            $model->update($itemId, [
+                'passed'       => $item['passed'] ? 0 : 1,
+                'inspected_by' => session()->get('user_id'),
+                'inspected_at' => date('Y-m-d H:i:s')
+            ]);
+            return $this->response->setJSON(['success' => true]);
+        }
         return $this->response->setJSON(['success' => false]);
     }
 

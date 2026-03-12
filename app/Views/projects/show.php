@@ -58,51 +58,74 @@ $priorityBadge = ['low'=>'info','medium'=>'secondary','high'=>'warning','urgent'
 </div>
 
 <!-- Tabs -->
-<?php // Ensure we understand the user's role
+<?php 
 $userRoleSlug = session()->get('role_slug') ?? 'employee';
 $isExternal = in_array($userRoleSlug, ['subcontractor_vendor', 'client']);
+$userPermissions = session()->get('user_permissions') ?? [];
+$isAdmin = in_array('admin', session()->get('user_roles') ?? []);
 
+$hasPerm = function($slug) use ($userPermissions, $isAdmin) {
+    return $isAdmin || in_array($slug, $userPermissions);
+};
+
+// Define base tabs
 $tabList = [
     'overview'   => ['Overview',   'fa-chart-pie'],
-    'finance'    => ['Finance', 'fa-chart-line'],
+    'finance'    => ['Finance',    'fa-chart-line'],
     'tasks'      => ['Tasks',      'fa-list-check'],
     'kanban'     => ['Kanban',     'fa-table-columns'],
-    'gantt'      => ['Gantt',      'fa-bars-staggered'],
-    'milestones' => ['Milestones', 'fa-flag'],
-    'drawings'   => ['Drawings',   'fa-compass-drafting'],
-    'rfis'       => ['RFIs',       'fa-circle-question'],
-    'submittals' => ['Submittals', 'fa-file-signature'],
-    'estimates'  => ['Estimates',  'fa-file-invoice'],
-    'procurement'=> ['Procurement','fa-file-contract'],
-    'field'      => ['Field App',  'fa-helmet-safety'],
-    'photos'     => ['Site Photos','fa-images'],
-    'change_management' => ['Change Management', 'fa-file-invoice-dollar'],
-    'meetings'   => ['Meetings', 'fa-users-rectangle'],
-    'areas'      => ['Areas / Zones', 'fa-layer-group'],
-    'schedule'   => ['Schedules', 'fa-calendar-days'],
-    'contracts'  => ['Contracts', 'fa-file-contract'],
-    'execution'  => ['Execution / Resources', 'fa-screwdriver-wrench'],
-    'report'     => ['Reports', 'fa-chart-column'],
-    'activity'   => ['Activities', 'fa-bolt'],
-    'bidding'    => ['Bidding', 'fa-file-signature'],
-    'finance_wip'=> ['WIP Report', 'fa-chart-pie'],
-    'boq'        => ['BOQ / SOV',  'fa-table'],
-    'drivers'    => ['Drivers / Qty', 'fa-gauge-high'],
-    'files'      => ['Files',      'fa-folder-open'],
-    'members'    => ['Team',       'fa-users'],
-]; ?>
-<ul class="nav nav-tabs mb-3 border-bottom" id="projectTabs">
-    <?php
-        if ($isExternal) {
-            $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'photos', 'files', 'finance'];
-            foreach (array_keys($tabList) as $key) {
-                if (!in_array($key, $allowedExternalTabs)) {
-                    unset($tabList[$key]);
-                }
-            }
+];
+
+// Gantt / Scheduler
+if (setting('module_p6_scheduler', '1') && $hasPerm('manage_p6_scheduler')) {
+    $tabList['gantt'] = ['Gantt', 'fa-bars-staggered'];
+}
+
+$tabList['milestones'] = ['Milestones', 'fa-flag'];
+$tabList['drawings']   = ['Drawings',   'fa-compass-drafting'];
+$tabList['rfis']       = ['RFIs',       'fa-circle-question'];
+$tabList['submittals'] = ['Submittals', 'fa-file-signature'];
+$tabList['estimates']  = ['Estimates',  'fa-file-invoice'];
+
+// Preconstruction & Procurement
+if (setting('module_preconstruction', '1') && $hasPerm('manage_preconstruction')) {
+    $tabList['procurement'] = ['Procurement', 'fa-file-contract'];
+}
+
+$tabList['field']  = ['Field App',  'fa-helmet-safety'];
+$tabList['photos'] = ['Site Photos', 'fa-images'];
+$tabList['change_management'] = ['Change Management', 'fa-file-invoice-dollar'];
+$tabList['meetings'] = ['Meetings', 'fa-users-rectangle'];
+$tabList['areas']    = ['Areas / Zones', 'fa-layer-group'];
+
+// Digital Handover
+if (setting('module_handover_qc', '1') && $hasPerm('manage_handover_qc')) {
+    $tabList['handover'] = ['Handover', 'fa-vault'];
+}
+
+$tabList['drivers'] = ['Drivers / Qty', 'fa-gauge-high'];
+
+// Production Control
+if (setting('module_production_control', '1') && $hasPerm('view_production_control')) {
+    $tabList['production_control'] = ['Production & Control', 'fa-gauge-high'];
+}
+
+$tabList['files']   = ['Files',   'fa-folder-open'];
+$tabList['members'] = ['Team',    'fa-users'];
+
+// Filter for external users
+if ($isExternal) {
+    $allowedExternalTabs = ['overview', 'drawings', 'rfis', 'submittals', 'field', 'photos', 'files', 'finance'];
+    foreach (array_keys($tabList) as $key) {
+        if (!in_array($key, $allowedExternalTabs)) {
+            unset($tabList[$key]);
         }
-        
-        foreach ($tabList as $slug => [$label, $icon]): ?>
+    }
+}
+?>
+
+<ul class="nav nav-tabs mb-3 border-bottom" id="projectTabs">
+    <?php foreach ($tabList as $slug => [$label, $icon]): ?>
     <li class="nav-item">
         <a class="nav-link <?= $tab === $slug ? 'active fw-semibold' : '' ?>"
            href="<?= site_url("projects/{$project['id']}?tab={$slug}") ?>">
@@ -147,6 +170,8 @@ $tabList = [
     case 'finance_wip': include __DIR__ . '/tabs/finance_wip.php'; break;
     case 'drivers':     include __DIR__ . '/tabs/drivers_inline.php'; break;
     case 'execution':   include __DIR__ . '/tabs/execution_inline.php'; break;
+    case 'handover':    include __DIR__ . '/tabs/handover_inline.php'; break;
+    case 'production_control': include __DIR__ . '/tabs/production_control.php'; break;
     default:           include __DIR__ . '/tabs/overview_inline.php'; break;
 endswitch; ?>
 </div>
@@ -399,7 +424,23 @@ function renderTaskDetail(d) {
         <div class="col-lg-8 p-4 border-end">
             <div class="mb-4">${t.description||'<p class="text-muted">No description.</p>'}</div>
             <hr>
-            <h6 class="fw-semibold mb-2">Checklist</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-shield-check me-2"></i>Preventative QC Checklist</h6>
+                <span class="badge bg-primary-subtle text-primary small">First-Time Quality</span>
+            </div>
+            <div id="qaChecklistArea" class="bg-light p-3 rounded mb-3">
+                ${(d.qa_checklists||[]).map(q => `
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input border-primary" type="checkbox" ${q.passed?'checked':''} onchange="toggleQaItem(${t.id}, ${q.id})">
+                            <label class="form-check-label fw-bold">${escHtml(q.title)}</label>
+                        </div>
+                        ${q.requires_photo ? '<span class="text-muted" style="font-size:0.7rem;"><i class="fa-solid fa-camera me-1"></i>Photo Required</span>' : ''}
+                    </div>
+                `).join('') || '<p class="text-muted small mb-0">No QC requirements defined for this task category.</p>'}
+            </div>
+            <hr>
+            <h6 class="fw-semibold mb-2">Standard Checklist</h6>
             <div id="checklistItems">${chkHtml}</div>
             <div class="input-group mt-2" style="max-width:340px;">
                 <input type="text" id="newChkItem" class="form-control form-control-sm" placeholder="Add item…">
@@ -654,6 +695,13 @@ function saveTaskField(taskId, field) {
         .then(r=>r.json()).then(d=>{
             if(!d.success) alert('Failed to update task.');
         });
+}
+
+function toggleQaItem(taskId, itemId) {
+    const fd = new FormData();
+    fd.append(CSRF_NAME, CSRF_TOKEN);
+    fd.append('item_id', itemId);
+    fetch(`/staging/public/tasks/${taskId}/qa-toggle`, { method:'POST', body: fd });
 }
 </script>
 

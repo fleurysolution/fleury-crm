@@ -159,7 +159,43 @@ $priorityColors = ['low'=>'info','medium'=>'secondary','high'=>'warning','urgent
             </div>
             <div class="col-12">
                 <label class="form-label small fw-semibold">Description</label>
-                <textarea id="plDesc" class="form-control" rows="3"></textarea>
+                <textarea id="plDesc" class="form-control" rows="2"></textarea>
+            </div>
+            
+            <!-- Smart Features -->
+            <div class="col-md-6">
+                <div class="card bg-light border-0">
+                    <div class="card-body p-3">
+                        <label class="form-label small fw-bold d-block mb-2"><i class="fa-solid fa-location-dot me-1"></i>Geotagging</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="pinLocation()">
+                            <i class="fa-solid fa-crosshairs me-1"></i> Pin Current Location
+                        </button>
+                        <div id="gpsStatus" class="small text-muted mt-2" style="font-size:0.7rem;">No GPS data pinned.</div>
+                        <input type="hidden" id="plLat">
+                        <input type="hidden" id="plLng">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-light border-0">
+                    <div class="card-body p-3 text-center">
+                        <label class="form-label small fw-bold d-block mb-2 text-start"><i class="fa-solid fa-camera me-1"></i>Photo Verification</label>
+                        <div id="cameraPreview" class="bg-dark rounded mb-2 d-none" style="height:100px; display:flex; align-items:center; justify-content:center;">
+                            <video id="video" width="100%" height="100%" autoplay playsinline></video>
+                        </div>
+                        <img id="photoThumb" class="img-thumbnail mb-2 d-none" style="height:100px;">
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="startCamera()">
+                                <i class="fa-solid fa-video me-1"></i> Camera
+                            </button>
+                            <input type="file" id="plFile" class="d-none" accept="image/*" onchange="previewFile(this)">
+                            <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="document.getElementById('plFile').click()">
+                                <i class="fa-solid fa-upload me-1"></i> Upload
+                            </button>
+                        </div>
+                        <canvas id="canvas" class="d-none"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -187,9 +223,59 @@ function deletePunchItem(id) {
         .then(() => location.reload());
 }
 
+let capturedBlob = null;
+
+function pinLocation() {
+    if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
+    const status = document.getElementById('gpsStatus');
+    status.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Locating...';
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('plLat').value = pos.coords.latitude;
+        document.getElementById('plLng').value = pos.coords.longitude;
+        status.innerHTML = `<i class="fa-solid fa-check text-success me-1"></i> Pinned: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+    }, err => {
+        status.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> Error: ${err.message}`;
+    });
+}
+
+function startCamera() {
+    const video = document.getElementById('video');
+    const preview = document.getElementById('cameraPreview');
+    preview.classList.remove('d-none');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+            video.srcObject = stream;
+            // Add click to capture
+            video.onclick = () => {
+                const canvas = document.getElementById('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                canvas.toBlob(blob => {
+                    capturedBlob = blob;
+                    const thumb = document.getElementById('photoThumb');
+                    thumb.src = URL.createObjectURL(blob);
+                    thumb.classList.remove('d-none');
+                    preview.classList.add('d-none');
+                    stream.getTracks().forEach(t => t.stop());
+                }, 'image/jpeg', 0.8);
+            };
+        });
+}
+
+function previewFile(input) {
+    if (input.files && input.files[0]) {
+        capturedBlob = input.files[0];
+        const thumb = document.getElementById('photoThumb');
+        thumb.src = URL.createObjectURL(capturedBlob);
+        thumb.classList.remove('d-none');
+    }
+}
+
 function submitPunchItem() {
     const title = document.getElementById('plTitle').value.trim();
     if (!title) { alert('Please enter a title.'); return; }
+    
     const fd = new FormData();
     fd.append(CSRF_NAME, CSRF_TOKEN);
     fd.append('title',       title);
@@ -199,6 +285,13 @@ function submitPunchItem() {
     fd.append('due_date',    document.getElementById('plDue').value);
     fd.append('area_id',     document.getElementById('plArea').value);
     fd.append('assigned_to', document.getElementById('plAssignee').value);
+    fd.append('latitude',    document.getElementById('plLat').value);
+    fd.append('longitude',   document.getElementById('plLng').value);
+    
+    if (capturedBlob) {
+        fd.append('photo', capturedBlob, 'punch.jpg');
+    }
+
     fetch(`/staging/public/projects/<?= $project['id'] ?>/punch-list`, {method:'POST', body: fd})
         .then(r=>r.json()).then(d=>{
             if (d.success) location.reload();

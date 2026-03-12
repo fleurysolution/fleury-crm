@@ -55,7 +55,7 @@ class ProjectEstimates extends BaseAppController
 
     /**
      * GET /estimates/:id
-     * Detail view to build line items.
+     * Detail view to build line items, GCs, and metadata.
      */
     public function show(int $id): string
     {
@@ -64,13 +64,58 @@ class ProjectEstimates extends BaseAppController
         if (!$estimate) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
 
         $project = (new ProjectModel())->find($estimate['project_id']);
-        $items = (new ProjectEstimateItemModel())->forEstimate($id);
+        $items   = (new ProjectEstimateItemModel())->forEstimate($id);
+        $gcs     = (new \App\Models\ProjectEstimateGCModel())->forEstimate($id);
+
+        $gcTotal = 0;
+        foreach ($gcs as $gc) $gcTotal += (float)$gc['amount'];
 
         return $this->render('project_estimates/show', [
             'project'  => $project,
             'estimate' => $estimate,
             'items'    => $items,
+            'gcs'      => $gcs,
+            'gcTotal'  => $gcTotal,
+            'grandTotal' => (float)$estimate['total_amount'] + $gcTotal
         ]);
+    }
+
+    /**
+     * POST /estimates/:id/metadata
+     */
+    public function updateMetadata(int $id): \CodeIgniter\HTTP\Response
+    {
+        $eModel = new ProjectEstimateModel();
+        $eModel->update($id, [
+            'risk_summary'   => $this->request->getPost('risk_summary'),
+            'clarifications' => $this->request->getPost('clarifications'),
+        ]);
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Metadata updated.']);
+    }
+
+    /**
+     * POST /estimates/:id/gcs
+     */
+    public function addGC(int $id): \CodeIgniter\HTTP\Response
+    {
+        (new \App\Models\ProjectEstimateGCModel())->insert([
+            'estimate_id' => $id,
+            'category'    => $this->request->getPost('category'),
+            'description' => $this->request->getPost('description'),
+            'amount'      => (float)$this->request->getPost('amount')
+        ]);
+
+        return $this->response->setJSON(['success' => true, 'message' => 'GC Added.']);
+    }
+
+    /**
+     * POST /estimates/:id/gcs/:gcId/delete
+     */
+    public function deleteGC(int $id, int $gcId): \CodeIgniter\HTTP\Response
+    {
+        (new \App\Models\ProjectEstimateGCModel())->delete($gcId);
+        return $this->response->setJSON(['success' => true, 'message' => 'GC Deleted.']);
     }
 
     /**
@@ -97,7 +142,7 @@ class ProjectEstimates extends BaseAppController
             'total_cost'  => $total
         ]);
 
-        // Update Master Total
+        // Update Master Total (Direct Costs)
         $newAmount = $estimate['total_amount'] + $total;
         $eModel->update($id, ['total_amount' => $newAmount]);
 

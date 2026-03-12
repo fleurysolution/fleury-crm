@@ -55,7 +55,19 @@ class PunchList extends BaseAppController
             'assigned_to' => $this->request->getPost('assigned_to') ?: null,
             'reported_by' => $this->currentUser['id'],
             'due_date'    => $this->request->getPost('due_date')    ?: null,
+            'latitude'    => $this->request->getPost('latitude')    ?: null,
+            'longitude'   => $this->request->getPost('longitude')   ?: null,
         ];
+
+        // Handle Photo Upload
+        $file = $this->request->getFile('photo');
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $newName = $file->getRandomName();
+            $dir = FCPATH . 'uploads/projects/' . $projectId . '/punch-list/';
+            if (!is_dir($dir)) mkdir($dir, 0755, true);
+            $file->move($dir, $newName);
+            $data['photo_path'] = 'uploads/projects/' . $projectId . '/punch-list/' . $newName;
+        }
 
         $id = $plModel->insert($data);
         $item = $plModel->forProject($projectId);

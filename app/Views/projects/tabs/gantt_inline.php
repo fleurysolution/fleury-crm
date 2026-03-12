@@ -38,13 +38,21 @@ $hasFrappe    = file_exists($ganttCssPath) && file_exists($ganttJsPath);
         <button type="button" class="btn btn-outline-primary active" onclick="ganttChart.change_view_mode('Week')">Week</button>
         <button type="button" class="btn btn-outline-secondary" onclick="ganttChart.change_view_mode('Month')">Month</button>
     </div>
+    <div class="btn-group btn-group-sm ms-2">
+        <button class="btn btn-outline-danger" onclick="recalculateCPM()">
+            <i class="fa-solid fa-calculator me-1"></i>Recalculate CPM
+        </button>
+        <button class="btn btn-outline-info" onclick="document.getElementById('xerUpload').click()">
+            <i class="fa-solid fa-file-import me-1"></i>Import XER
+        </button>
+        <input type="file" id="xerUpload" style="display:none" onchange="uploadXer(this)" accept=".xer">
+    </div>
     <div class="ms-auto d-flex gap-2 small text-muted align-items-center">
+        <span class="d-inline-block" style="width:10px;height:10px;border-radius:2px;background:#dc3545;"></span> Critical Path
         <span class="d-inline-block" style="width:10px;height:10px;border-radius:2px;background:#0d6efd;"></span> In Progress
         <span class="d-inline-block" style="width:10px;height:10px;border-radius:2px;background:#198754;"></span> Done
-        <span class="d-inline-block" style="width:10px;height:10px;border-radius:2px;background:#dc3545;"></span> Blocked
-        <span class="d-inline-block" style="width:10px;height:10px;border-radius:2px;background:#6c757d;"></span> To Do
     </div>
-    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="openNewTaskModal()">
+    <button class="btn btn-sm btn-primary ms-2" onclick="openNewTaskModal()">
         <i class="fa-solid fa-plus me-1"></i>Add Task
     </button>
 </div>
@@ -78,6 +86,11 @@ let ganttChart;
 let editingTaskId;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    loadGanttData();
+});
+
+async function loadGanttData() {
+    document.getElementById('ganttLoadingMsg').style.display = 'block';
     const res  = await fetch(`/staging/public/projects/<?= $project['id'] ?>/gantt/data`, {
         headers: {'X-Requested-With':'XMLHttpRequest'}
     });
@@ -85,12 +98,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('ganttLoadingMsg').style.display = 'none';
 
     if (!data.tasks || data.tasks.length === 0) {
-        document.getElementById('ganttChart').innerHTML = '<p class="text-muted text-center py-5">No tasks with dates yet. Add start/end dates to tasks to see them here.</p>';
+        document.getElementById('ganttChart').innerHTML = '<p class="text-muted text-center py-5">No tasks with dates yet. Add start/end dates or import an XER file.</p>';
         return;
     }
 
-    // Filter to tasks with dates only
-    const tasks = data.tasks.filter(t => t.start && t.end && !t.is_group);
+    const tasks = data.tasks.map(t => {
+        if (t.is_critical == 1) t.custom_class = 'gantt-critical-bar';
+        return t;
+    });
 
     ganttChart = new Gantt('#ganttChart', tasks, {
         view_mode: 'Week',
@@ -106,7 +121,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         popup_trigger: 'none',
     });
-});
+}
+
+function uploadXer(input) {
+    if (!input.files.length) return;
+    const formData = new FormData();
+    formData.append('xer_file', input.files[0]);
+    formData.append(CSRF_NAME, CSRF_TOKEN);
+
+    fetch(`/staging/public/projects/<?= $project['id'] ?>/gantt/import`, {
+        method: 'POST',
+        body: formData
+    }).then(r=>r.json()).then(res => {
+        if (res.success) {
+            alert('Import successful: ' + res.count + ' tasks imported.');
+            loadGanttData();
+        } else {
+            alert('Import failed: ' + (res.message || 'Unknown error'));
+        }
+    });
+}
+
+function recalculateCPM() {
+    const fd = new FormData();
+    fd.append(CSRF_NAME, CSRF_TOKEN);
+    fetch(`/staging/public/projects/<?= $project['id'] ?>/gantt/recalculate`, {
+        method: 'POST',
+        body: fd
+    }).then(() => loadGanttData());
+}
 
 function formatDate(d) {
     const dt = new Date(d);

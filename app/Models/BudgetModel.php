@@ -10,7 +10,7 @@ class BudgetModel extends Model
     {
         $db = \Config\Database::connect();
 
-        // 1. Original Budget (Priority: Project Budget Items sum > Flat Project field)
+        // 1. Original Budget (Direct Costs)
         $itemsSum = $db->table('project_budget_items')
             ->selectSum('total_cost')
             ->where('project_id', $projectId)
@@ -20,11 +20,18 @@ class BudgetModel extends Model
         
         $project = $db->table('projects')->where('id', $projectId)->get()->getRowArray();
         
-        if ($itemsSum->total_cost > 0) {
-            $originalBudget = (float)$itemsSum->total_cost;
-        } else {
-            $originalBudget = (float)($project['budget'] ?? 0);
-        }
+        $directBudget = ($itemsSum->total_cost > 0) ? (float)$itemsSum->total_cost : (float)($project['budget'] ?? 0);
+
+        // 1.1 Estimated General Conditions (GCs) from Approved Estimates
+        $gcSum = $db->table('project_estimate_gcs')
+            ->selectSum('amount')
+            ->join('project_estimates', 'project_estimates.id = project_estimate_gcs.estimate_id')
+            ->where('project_estimates.project_id', $projectId)
+            ->where('project_estimates.status', 'Approved')
+            ->get()->getRow();
+        $totalGCs = (float)($gcSum->amount ?? 0);
+
+        $originalBudget = $directBudget + $totalGCs;
 
         // 2. Approved Change Orders
         $approvedCOs = $db->table('change_orders')

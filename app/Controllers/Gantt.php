@@ -108,4 +108,88 @@ class Gantt extends BaseAppController
 
         return $this->response->setJSON(['success' => true]);
     }
+
+    /**
+     * AJAX — Upload and import a Primavera P6 XER file.
+     * POST /projects/:id/gantt/import
+     */
+    public function importXer(int $projectId): \CodeIgniter\HTTP\Response
+    {
+        $file = $this->request->getFile('xer_file');
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid file.']);
+        }
+
+        $content = file_get_contents($file->getTempName());
+        $tables = \App\Helpers\XERParser::parse($content);
+        $mapped = \App\Helpers\XERParser::mapToSystem($projectId, $tables);
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        // 1. Clear existing schedule data for this project
+        $db->table('tasks')->where('project_id', $projectId)->delete();
+        $db->table('wbs_phases')->where('project_id', $projectId)->delete();
+        $db->table('task_dependencies')->whereIn('task_id', function($builder) use ($projectId) {
+            return $builder->select('id')->from('tasks')->where('project_id', $projectId);
+        })->delete();
+
+        // 2. Insert WBS Phases
+        $phaseModel = new \App\Models\PhaseModel();
+        $p6ToInternalWbs = [];
+        foreach ($mapped['wbs'] as $wbs) {
+            $id = $phaseModel->insert([
+                'project_id' => $projectId,
+                'title' => $wbs['title'],
+                'sort_order' => $wbs['sort_order']
+            ]);
+            $p6ToInternalWbs[$wbs['p6_id']] = $id;
+        }
+
+        // 3. Insert Tasks
+        $taskModel = new \App\Models\TaskModel();
+        $p6ToInternalTask = [];
+        foreach ($mapped['tasks'] as $t) {
+            $data = $t;
+            $data['phase_id'] = $p6ToInternalWbs[$t['wbs_p6_id']] ?? null;
+            $p6Id = $t['p6_id'];
+            unset($data['p6_id'], $data['wbs_p6_id']); 
+            
+            $id = $taskModel->insert($data);
+            $p6ToInternalTask[$p6Id] = $id;
+        }
+
+        // 4. Insert Dependencies
+        foreach ($mapped['dependencies'] as $d) {
+            if (isset($p6ToInternalTask[$d['task_p6_id']]) && isset($p6ToInternalTask[$d['pred_task_p6_id']])) {
+                $db->table('task_dependencies')->insert([
+                    'task_id' => $p6ToInternalTask[$d['task_p6_id']],
+                    'depends_on_task' => $p6ToInternalTask[$d['pred_task_p6_id']],
+                    'type' => $d['type'],
+                    'lag_days' => $d['lag']
+                ]);
+            }
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Database error during import.']);
+        }
+
+        // Trigger CPM recalculation
+        \App\Helpers\CPMHelper::recalculate($projectId);
+
+        return $this->response->setJSON(['success' => true, 'count' => count($mapped['tasks'])]);
+    }
+
+    /**
+     * AJAX — Manually trigger CPM recalculation.
+     * POST /projects/:id/gantt/recalculate
+     */
+    public function recalculate(int $projectId): \CodeIgniter\HTTP\Response
+    {
+        \App\Helpers\CPMHelper::recalculate($projectId);
+        return $this->response->setJSON(['success' => true]);
+    }
 }

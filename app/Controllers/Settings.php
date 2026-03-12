@@ -1148,4 +1148,116 @@ class Settings extends BaseController
 
         return $this->response->setJSON(['success' => true, 'message' => 'Construction settings saved.']);
     }
+
+    // =========================================================================
+    // CYBERSECURITY
+    // =========================================================================
+
+    public function security()
+    {
+        $userId = session()->get('user_id');
+        $userModel = new \App\Models\FsUserModel();
+        $user = $userModel->find($userId);
+
+        $mfa = new \App\Services\MfaService();
+        $tempSecret = session()->get('temp_mfa_secret');
+        $qrCodeUrl = '';
+        
+        if ($tempSecret) {
+            $qrCodeUrl = $mfa->getQrCodeUrl($user['email'], 'BPMS247', $tempSecret);
+        }
+
+        return view('settings/security', [
+            'title'     => 'Cybersecurity',
+            'tab'       => 'security',
+            'user'      => $user,
+            'qrCodeUrl' => $qrCodeUrl,
+            'tempSecret' => $tempSecret,
+        ]);
+    }
+
+    public function setup_mfa()
+    {
+        $mfa = new \App\Services\MfaService();
+        $secret = $mfa->generateSecret();
+        session()->set('temp_mfa_secret', $secret);
+
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    public function verify_mfa_setup()
+    {
+        $code = trim((string)$this->request->getPost('code'));
+        $secret = session()->get('temp_mfa_secret');
+        $userId = session()->get('user_id');
+
+        if (!$secret || !$code) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request.']);
+        }
+
+        $mfa = new \App\Services\MfaService();
+        if ($mfa->verifyCode($secret, $code)) {
+            $userModel = new \App\Models\FsUserModel();
+            $userModel->update($userId, [
+                'mfa_secret'  => $secret,
+                'mfa_enabled' => 1
+            ]);
+            session()->remove('temp_mfa_secret');
+            
+            \App\Models\SecurityLogModel::record($userId, 'mfa_enabled', 'medium', "User enabled MFA");
+            
+            return $this->response->setJSON(['success' => true, 'message' => 'MFA has been enabled successfully.']);
+        }
+
+        return $this->response->setJSON(['success' => false, 'message' => 'Invalid verification code.']);
+    }
+
+    public function disable_mfa()
+    {
+        $userId = session()->get('user_id');
+        $userModel = new \App\Models\FsUserModel();
+        
+        $userModel->update($userId, [
+            'mfa_secret'  => null,
+            'mfa_enabled' => 0
+        ]);
+
+        \App\Models\SecurityLogModel::record($userId, 'mfa_disabled', 'high', "User disabled MFA");
+
+        return $this->response->setJSON(['success' => true, 'message' => 'MFA has been disabled.']);
+    }
+
+    public function security_log_data()
+    {
+        $userId = session()->get('user_id');
+        $logModel = new \App\Models\SecurityLogModel();
+        
+        $logs = $logModel->where('user_id', $userId)
+                        ->orderBy('created_at', 'DESC')
+                        ->limit(20)
+                        ->findAll();
+        
+        $html = '';
+        if (empty($logs)) {
+            $html = '<div class="text-center text-muted py-5">No security events recorded.</div>';
+        } else {
+            foreach ($logs as $log) {
+                $icon = 'fa-circle-info text-info';
+                if ($log['severity'] === 'high' || $log['severity'] === 'critical') $icon = 'fa-circle-exclamation text-danger';
+                if ($log['severity'] === 'medium') $icon = 'fa-triangle-exclamation text-warning';
+                
+                $html .= '
+                <div class="d-flex gap-3 mb-4">
+                    <div style="width:12px; height:12px; margin-top:5px;"><i class="fa-solid ' . $icon . '"></i></div>
+                    <div>
+                        <div class="fw-bold">' . esc(ucwords(str_replace('_', ' ', $log['event_type']))) . '</div>
+                        <div class="text-muted" style="font-size:0.75rem;">' . esc($log['description']) . '</div>
+                        <div class="text-muted xsmall mt-1">' . date('M j, Y H:i', strtotime($log['created_at'])) . ' • ' . $log['ip_address'] . '</div>
+                    </div>
+                </div>';
+            }
+        }
+        
+        return $this->response->setJSON(['html' => $html]);
+    }
 }

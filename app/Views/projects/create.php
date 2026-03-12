@@ -110,6 +110,51 @@
         <input type="number" name="budget" class="form-control" placeholder="0.00" min="0" step="0.01" value="<?= old('budget') ?>">
     </div>
 
+    <!-- Baseline Assumptions (Driver Engine) -->
+    <div class="col-12 mt-4">
+        <h6 class="fw-bold border-bottom pb-2 mb-3 text-primary"><i class="fa-solid fa-gauge-high me-2"></i>Project Baseline & Production Drivers</h6>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Sector / Project Type</label>
+        <select name="sector" class="form-select">
+            <option value="commercial">Commercial</option>
+            <option value="data_center">Data Center (Mission Critical)</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="industrial">Industrial</option>
+            <option value="residential">Residential</option>
+            <option value="infrastructure">Infrastructure</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Gross SQFT</label>
+        <input type="number" name="gross_sqft" class="form-control" placeholder="Total building area">
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Total Floors</label>
+        <input type="number" name="total_floors" class="form-control" placeholder="Count">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Site Acreage</label>
+        <input type="number" step="0.01" name="site_acreage" class="form-control">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Estimated Duration (Months)</label>
+        <input type="number" step="0.1" name="duration_months" class="form-control">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Labor Productivity Factor</label>
+        <input type="number" step="0.01" name="labor_productivity_factor" class="form-control" value="1.00">
+        <small class="text-muted">1.0 = Baseline Benchmark</small>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Technical Standard</label>
+        <select name="standard_owner_id" class="form-select">
+            <option value="">— Standard Company Logic —</option>
+            <option value="1">Owner Standard A (Enterprise)</option>
+            <option value="2">Owner Standard B (Colocation)</option>
+        </select>
+    </div>
+
     <!-- Dates + Budget -->
     <div class="col-md-4">
         <label class="form-label fw-semibold">Start Date</label>

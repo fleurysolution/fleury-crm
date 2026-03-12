@@ -1,13 +1,15 @@
 <?php
 // app/Views/projects/tabs/boq_inline.php
-$boqModel = new \App\Models\BOQItemModel();
-$tree     = $boqModel->buildTree($project['id']);
-$totalBOQ = $boqModel->totalBOQ($project['id']);
-$totalAct = $boqModel->totalActual($project['id']);
-$variance = $totalAct - $totalBOQ;
-$pct      = $totalBOQ > 0 ? round($totalAct / $totalBOQ * 100, 1) : 0;
+$boqModel    = new \App\Models\BOQItemModel();
+$driverModel  = new \App\Models\ProjectDriverModel();
+$drivers      = $driverModel->forProject($project['id']);
+$tree         = $boqModel->buildTree($project['id']);
+$totalBOQ     = $boqModel->totalBOQ($project['id']);
+$totalAct     = $boqModel->totalActual($project['id']);
+$variance     = $totalAct - $totalBOQ;
+$pct          = $totalBOQ > 0 ? round($totalAct / $totalBOQ * 100, 1) : 0;
 
-function renderBOQRow(array $item, int $depth = 0): void { ?>
+function renderBOQRow(array $item, int $depth = 0, array $drivers = []): void { ?>
 <?php if ($item['is_section']): ?>
 <tr class="table-light fw-semibold" data-id="<?= $item['id'] ?>">
     <td colspan="7" style="padding-left:<?= ($depth * 16 + 8) ?>px;">
@@ -17,7 +19,17 @@ function renderBOQRow(array $item, int $depth = 0): void { ?>
 <?php else: ?>
 <tr data-id="<?= $item['id'] ?>">
     <td style="padding-left:<?= ($depth * 16 + 16) ?>px;" class="text-muted small"><?= esc($item['item_code'] ?? '') ?></td>
-    <td><?= esc($item['description']) ?></td>
+    <td>
+        <?= esc($item['description']) ?>
+        <?php if ($item['driver_id']): 
+            $dName = '';
+            foreach ($drivers as $drv) if ($drv['id'] == $item['driver_id']) $dName = $drv['name'];
+        ?>
+        <div class="small text-primary opacity-75" style="font-size:0.75rem;">
+            <i class="fa-solid fa-link me-1"></i>Linked: <?= esc($dName) ?> (x<?= $item['driver_multiplier'] ?>)
+        </div>
+        <?php endif; ?>
+    </td>
     <td class="text-center"><?= esc($item['unit'] ?? '') ?></td>
     <td class="text-end"><?= number_format($item['quantity'], 2) ?></td>
     <td class="text-end"><?= number_format($item['unit_rate'], 2) ?></td>
@@ -27,17 +39,19 @@ function renderBOQRow(array $item, int $depth = 0): void { ?>
     </td>
 </tr>
 <?php endif;
-    foreach ($item['children'] ?? [] as $child) renderBOQRow($child, $depth + 1);
+    foreach ($item['children'] ?? [] as $child) renderBOQRow($child, $depth + 1, $drivers);
 }
 ?>
 
 <!-- Summary bar -->
 <div class="row g-3 mb-3">
-    <?php foreach ([
+    <?php 
+    $costPerSqFt = ($project['gross_sqft'] > 0) ? ($totalBOQ / $project['gross_sqft']) : 0;
+    foreach ([
         ['BOQ Total', number_format($totalBOQ,2), 'primary'],
         ['Actual', number_format($totalAct,2), 'info'],
+        ['Cost / SQFT', ($costPerSqFt > 0 ? '$'.number_format($costPerSqFt,2) : '—'), 'secondary'],
         ['Variance', ($variance >= 0 ? '+' : '').number_format($variance,2), $variance >= 0 ? 'success' : 'danger'],
-        ['Progress', $pct.'%', $pct >= 100 ? 'success' : 'warning'],
     ] as [$label, $value, $color]): ?>
     <div class="col-md-3">
         <div class="card border-0 bg-<?= $color ?>-subtle text-<?= $color ?> text-center py-3" style="border-radius:10px;">
@@ -78,7 +92,7 @@ function renderBOQRow(array $item, int $depth = 0): void { ?>
         </tr>
     </thead>
     <tbody id="boqBody">
-    <?php foreach ($tree as $item) renderBOQRow($item); ?>
+    <?php foreach ($tree as $item) renderBOQRow($item, 0, $drivers); ?>
     <?php if (empty($tree)): ?>
     <tr><td colspan="7" class="text-center text-muted py-4">No BOQ items yet. Click <strong>Add Item</strong> to begin.</td></tr>
     <?php endif; ?>
@@ -108,8 +122,27 @@ function renderBOQRow(array $item, int $depth = 0): void { ?>
                 <input type="text" id="boqCode" class="form-control form-control-sm"></div>
             <div class="col-8"><label class="form-label small">Description <span class="text-danger">*</span></label>
                 <input type="text" id="boqDesc" class="form-control form-control-sm"></div>
+            
             <div id="boqQtyFields">
-                <div class="row g-2 mt-0">
+                <div class="col-12 mt-2 bg-light p-2 rounded border">
+                    <label class="form-label small fw-bold text-primary mb-1"><i class="fa-solid fa-link me-1"></i>Driver-Link (Optional)</label>
+                    <div class="row g-1">
+                        <div class="col-8">
+                            <select id="boqDriverId" class="form-select form-select-sm" onchange="toggleManualQty()">
+                                <option value="">— Use Manual Quantity —</option>
+                                <?php foreach ($drivers as $d): ?>
+                                <option value="<?= $d['id'] ?>"><?= esc($d['name']) ?> (<?= $d['value'] ?> <?= esc($d['unit']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <input type="number" id="boqMultiplier" class="form-control form-control-sm" placeholder="Multiplier" step="0.0001" value="1.0000">
+                        </div>
+                    </div>
+                    <small class="text-muted" style="font-size:0.7rem;">Select a driver to auto-calculate Qty based on project metrics.</small>
+                </div>
+
+                <div class="row g-2 mt-2">
                     <div class="col-4"><label class="form-label small">Unit</label>
                         <input type="text" id="boqUnit" class="form-control form-control-sm" placeholder="m², kg…"></div>
                     <div class="col-4"><label class="form-label small">Qty</label>
@@ -127,6 +160,17 @@ function renderBOQRow(array $item, int $depth = 0): void { ?>
 </div></div></div>
 
 <script>
+function toggleManualQty() {
+    const drvId = document.getElementById('boqDriverId').value;
+    const qtyInput = document.getElementById('boqQty');
+    if (drvId) {
+        qtyInput.readOnly = true;
+        qtyInput.classList.add('bg-light');
+    } else {
+        qtyInput.readOnly = false;
+        qtyInput.classList.remove('bg-light');
+    }
+}
 function addBOQSection() {
     document.getElementById('boqIsSection').value = '1';
     document.getElementById('boqModalTitle').textContent = 'Add Section Header';
@@ -137,6 +181,9 @@ function addBOQItem() {
     document.getElementById('boqIsSection').value = '0';
     document.getElementById('boqModalTitle').textContent = 'Add BOQ Item';
     document.getElementById('boqQtyFields').style.display = '';
+    document.getElementById('boqDriverId').value = '';
+    document.getElementById('boqMultiplier').value = '1.0000';
+    toggleManualQty();
     new bootstrap.Modal(document.getElementById('boqItemModal')).show();
 }
 function saveBOQItem() {
@@ -154,6 +201,8 @@ function saveBOQItem() {
             unit_rate:   rate,
             is_section:  parseInt(isSection),
             sort_order:  document.querySelectorAll('#boqBody tr').length,
+            driver_id:   document.getElementById('boqDriverId').value,
+            driver_multiplier: document.getElementById('boqMultiplier').value,
         }]
     };
     fetch(`/staging/public/projects/<?= $project['id'] ?>/boq`, {

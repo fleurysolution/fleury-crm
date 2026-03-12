@@ -37,7 +37,18 @@ class BOQ extends BaseAppController
         $boqModel = new BOQItemModel();
 
         foreach ($rows as $row) {
-            $qty    = (float)($row['quantity'] ?? 0);
+            $driverId = ($row['driver_id'] ?? null) ?: null;
+            $multiplier = (float)($row['driver_multiplier'] ?? 1.0);
+            $qty = (float)($row['quantity'] ?? 0);
+
+            // If linked to a driver, override qty with driver_value * multiplier
+            if ($driverId) {
+                $driver = (new \App\Models\QuantityDriverModel())->find($driverId);
+                if ($driver) {
+                    $qty = (float)$driver['value'] * $multiplier;
+                }
+            }
+
             $rate   = (float)($row['unit_rate'] ?? 0);
             $data   = [
                 'project_id'  => $projectId,
@@ -50,6 +61,8 @@ class BOQ extends BaseAppController
                 'total_amount'=> $qty * $rate,
                 'is_section'  => (int)($row['is_section'] ?? 0),
                 'sort_order'  => (int)($row['sort_order'] ?? 0),
+                'driver_id'   => $driverId,
+                'driver_multiplier' => $multiplier
             ];
 
             if (!empty($row['id'])) {

@@ -15,6 +15,9 @@ class TaskModel extends ErpModel
         'start_date', 'start_time', 'due_date', 'end_time', 
         'estimated_hours', 'actual_hours', 'points', 'labels', 'recurring_rule',
         'percent_complete', 'sort_order', 'created_by',
+        'activity_id', 'is_milestone', 'constraint_type', 'constraint_date',
+        'original_duration', 'early_start', 'early_finish', 'late_start', 'late_finish',
+        'total_float', 'is_critical'
     ];
 
     public function withAssignee(): static

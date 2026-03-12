@@ -14,6 +14,7 @@ class BOQItemModel extends Model
         'project_id','contract_id','cost_code_id','parent_id','item_code',
         'description','unit','quantity','unit_rate','total_amount',
         'actual_qty','actual_amount','is_section','sort_order',
+        'driver_id', 'driver_multiplier'
     ];
 
     public function forProject(int $projectId): array

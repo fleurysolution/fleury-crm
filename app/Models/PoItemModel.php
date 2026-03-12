@@ -13,6 +13,9 @@ class PoItemModel extends Model
 
     protected $allowedFields = [
         'po_id',
+        'cost_code_id',
+        'task_id',
+        'area_id',
         'description',
         'quantity',
         'unit',

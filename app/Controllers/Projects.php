@@ -150,6 +150,13 @@ class Projects extends BaseAppController
             'status'      => $this->request->getPost('status') ?? 'draft',
             'project_stage'=> $this->request->getPost('project_stage') ?? 'pre_construction',
             'priority'    => $this->request->getPost('priority') ?? 'medium',
+            'sector'         => $this->request->getPost('sector') ?: null,
+            'total_floors'   => $this->request->getPost('total_floors') ?: null,
+            'site_acreage'   => $this->request->getPost('site_acreage') ?: null,
+            'gross_sqft'     => $this->request->getPost('gross_sqft') ?: null,
+            'duration_months' => $this->request->getPost('duration_months') ?: null,
+            'labor_productivity_factor' => $this->request->getPost('labor_productivity_factor') ?: 1.0,
+            'standard_owner_id' => $this->request->getPost('standard_owner_id') ?: null,
             'start_date'  => $this->request->getPost('start_date') ?: null,
             'end_date'    => $this->request->getPost('end_date') ?: null,
             'budget'      => $this->request->getPost('budget') ?: null,
@@ -203,7 +210,11 @@ class Projects extends BaseAppController
         $submittals = $this->submittals->where('project_id', $id)->findAll(); // Added
         $drawings   = $this->drawings->where('project_id', $id)->findAll(); // Added
         $photos     = $this->photos->where('project_id', $id)->orderBy('created_at', 'DESC')->findAll(); // Added
-
+        
+        // Fetch Procurement & Bid Data for Phase 5
+        $procurementModel = new \App\Models\ProcurementModel();
+        $bidComparisonModel = new \App\Models\BidComparisonModel();
+        
         return $this->render('projects/show', [
             'title'      => $project['title'],
             'project'    => $project,
@@ -216,11 +227,14 @@ class Projects extends BaseAppController
             'submittals' => $submittals, // Added
             'drawings'   => $drawings, // Added
             'photos'     => $photos, // Added
+            'procurement_items' => ($tab === 'procurement') ? $procurementModel->where('project_id', $id)->findAll() : [],
+            'bid_comparisons'   => ($tab === 'procurement') ? $bidComparisonModel->where('project_id', $id)->findAll() : [],
             'change_events' => ($tab === 'change_management') ? $this->events->getForProject($id, $project['tenant_id']) : [],
             'change_orders' => ($tab === 'change_management' || $tab === 'finance') ? $this->orders->getForProject($id, $project['tenant_id']) : [],
             'project_contracts' => ($tab === 'change_management') ? $this->contracts->forProject($id) : [],
             'meetings'      => ($tab === 'meetings') ? $this->meetings_model->getForProject($id, $project['tenant_id']) : [],
-            'budget_data'   => ($tab === 'finance' || $tab === 'finance_wip') ? $this->budget_model->getProjectFinancials($id, $project['tenant_id']) : null,
+            'budget_data'   => ($tab === 'finance' || $tab === 'finance_wip' || $tab === 'production_control') ? $this->budget_model->getProjectFinancials($id, $project['tenant_id']) : null,
+            'control_metrics' => ($tab === 'production_control') ? (new \App\Services\ProjectControlService())->getPerformanceMetrics($id) : null,
             'bid_packages'  => ($tab === 'bidding') ? $this->bid_packages->getForProject($id, $project['tenant_id']) : [],
             'bids_per_package' => ($tab === 'bidding') ? $this->getBidsPerPackage($id) : [],
             'drawings_list' => ($tab === 'drawings') ? $this->drawings->where('project_id', $id)->where('tenant_id', $project['tenant_id'])->findAll() : [],
@@ -254,6 +268,13 @@ class Projects extends BaseAppController
             'status'      => $this->request->getPost('status') ?? 'active',
             'project_stage'=> $this->request->getPost('project_stage') ?? 'active',
             'priority'    => $this->request->getPost('priority') ?? 'medium',
+            'sector'         => $this->request->getPost('sector') ?: null,
+            'total_floors'   => $this->request->getPost('total_floors') ?: null,
+            'site_acreage'   => $this->request->getPost('site_acreage') ?: null,
+            'gross_sqft'     => $this->request->getPost('gross_sqft') ?: null,
+            'duration_months' => $this->request->getPost('duration_months') ?: null,
+            'labor_productivity_factor' => $this->request->getPost('labor_productivity_factor') ?: 1.0,
+            'standard_owner_id' => $this->request->getPost('standard_owner_id') ?: null,
             'start_date'  => $this->request->getPost('start_date') ?: null,
             'end_date'    => $this->request->getPost('end_date') ?: null,
             'budget'      => $this->request->getPost('budget') ?: null,

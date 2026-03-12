@@ -67,7 +67,7 @@
                                         <option value="delivery">Delivery</option>
                                     </select>
                                 </div>
-                                <div class="col-md-7">
+                                <div class="col-md-5">
                                     <input type="text" name="item_description[]" class="form-control form-control-sm" placeholder="Description of work performed…">
                                 </div>
                                 <div class="col-md-2">
@@ -77,6 +77,17 @@
                                         <option value="<?= $a['id'] ?>"><?= esc($a['name']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="input-group input-group-sm">
+                                        <select name="item_boq_item_id[]" class="form-select" style="width:65%;">
+                                            <option value="">Link BOQ…</option>
+                                            <?php foreach ($boq as $b): ?>
+                                            <option value="<?= $b['id'] ?>"><?= esc($b['item_code'] . ' - ' . substr($b['description'], 0, 30)) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <input type="number" step="0.01" name="item_quantity_done[]" class="form-control" placeholder="Qty">
+                                    </div>
                                 </div>
                                 <div class="col-md-1 text-end">
                                     <button type="button" class="btn btn-sm btn-link text-danger p-0 mt-1" onclick="this.closest('.item-row').remove()">
@@ -114,7 +125,7 @@
                 <option value="delivery">Delivery</option>
             </select>
         </div>
-        <div class="col-md-7">
+        <div class="col-md-5">
             <input type="text" name="item_description[]" class="form-control form-control-sm" placeholder="Description of work performed…">
         </div>
         <div class="col-md-2">
@@ -124,6 +135,17 @@
                 <option value="<?= $a['id'] ?>"><?= esc($a['name']) ?></option>
                 <?php endforeach; ?>
             </select>
+        </div>
+        <div class="col-md-3">
+            <div class="input-group input-group-sm">
+                <select name="item_boq_item_id[]" class="form-select" style="width:65%;">
+                    <option value="">Link BOQ…</option>
+                    <?php foreach ($boq as $b): ?>
+                    <option value="<?= $b['id'] ?>"><?= esc($b['item_code'] . ' - ' . substr($b['description'], 0, 30)) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input type="number" step="0.01" name="item_quantity_done[]" class="form-control" placeholder="Qty">
+            </div>
         </div>
         <div class="col-md-1 text-end">
             <button type="button" class="btn btn-sm btn-link text-danger p-0 mt-1" onclick="this.closest('.item-row').remove()">

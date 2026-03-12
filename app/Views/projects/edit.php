@@ -106,6 +106,47 @@
         <input type="number" name="budget" class="form-control" placeholder="0.00" min="0" step="0.01" value="<?= esc($project['budget'] ?? '') ?>">
     </div>
 
+    <!-- Baseline Assumptions (Driver Engine) -->
+    <div class="col-12 mt-4">
+        <h6 class="fw-bold border-bottom pb-2 mb-3 text-primary"><i class="fa-solid fa-gauge-high me-2"></i>Project Baseline & Production Drivers</h6>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Sector / Project Type</label>
+        <select name="sector" class="form-select">
+            <?php foreach(['commercial'=>'Commercial','data_center'=>'Data Center','healthcare'=>'Healthcare','industrial'=>'Industrial','residential'=>'Residential','infrastructure'=>'Infrastructure'] as $k=>$v): ?>
+            <option value="<?= $k ?>" <?= ($project['sector'] ?? '') === $k ? 'selected' : '' ?>><?= $v ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Gross SQFT</label>
+        <input type="number" name="gross_sqft" class="form-control" value="<?= esc($project['gross_sqft'] ?? '') ?>">
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Total Floors</label>
+        <input type="number" name="total_floors" class="form-control" value="<?= esc($project['total_floors'] ?? '') ?>">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Site Acreage</label>
+        <input type="number" step="0.01" name="site_acreage" class="form-control" value="<?= esc($project['site_acreage'] ?? '') ?>">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Estimated Duration (Months)</label>
+        <input type="number" step="0.1" name="duration_months" class="form-control" value="<?= esc($project['duration_months'] ?? '') ?>">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Labor Productivity Factor</label>
+        <input type="number" step="0.01" name="labor_productivity_factor" class="form-control" value="<?= esc($project['labor_productivity_factor'] ?? '1.00') ?>">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Technical Standard</label>
+        <select name="standard_owner_id" class="form-select">
+            <option value="">— Standard Company Logic —</option>
+            <option value="1" <?= ($project['standard_owner_id'] ?? '') == '1' ? 'selected' : '' ?>>Owner Standard A (Enterprise)</option>
+            <option value="2" <?= ($project['standard_owner_id'] ?? '') == '2' ? 'selected' : '' ?>>Owner Standard B (Colocation)</option>
+        </select>
+    </div>
+
     <!-- Dates + Budget -->
     <div class="col-md-4">
         <label class="form-label fw-semibold">Start Date</label>

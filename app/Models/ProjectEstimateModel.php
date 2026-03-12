@@ -18,6 +18,8 @@ class ProjectEstimateModel extends ErpModel
         'title',
         'status',
         'total_amount',
+        'risk_summary',
+        'clarifications',
         'created_by',
         'created_at',
         'updated_at',

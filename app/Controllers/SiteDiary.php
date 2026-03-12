@@ -40,10 +40,12 @@ class SiteDiary extends BaseAppController
         }
 
         $areas = (new AreaModel())->where('project_id', $projectId)->findAll();
+        $boq   = (new \App\Models\BOQItemModel())->where('project_id', $projectId)->where('is_section', 0)->where('deleted_at IS NULL')->findAll();
 
         return $this->render('site_diary/create', [
             'project' => $project,
             'areas'   => $areas,
+            'boq'     => $boq,
             'date'    => $date,
         ]);
     }
@@ -96,12 +98,14 @@ class SiteDiary extends BaseAppController
         $project = (new ProjectModel())->find($projectId);
         $items   = (new SiteDiaryItemModel())->forDiary($diaryId);
         $areas   = (new AreaModel())->where('project_id', $projectId)->findAll();
+        $boq     = (new \App\Models\BOQItemModel())->where('project_id', $projectId)->where('is_section', 0)->where('deleted_at IS NULL')->findAll();
 
         return $this->render('site_diary/show', [
             'project' => $project,
             'diary'   => $diary,
             'items'   => $items,
             'areas'   => $areas,
+            'boq'     => $boq,
         ]);
     }
 
@@ -161,6 +165,10 @@ class SiteDiary extends BaseAppController
      */
     public function approve(int $projectId, int $diaryId): \CodeIgniter\HTTP\RedirectResponse
     {
+        $sdModel = new SiteDiaryModel();
+        $diary = $sdModel->find($diaryId);
+        if (!$diary) return redirect()->back()->with('error', 'Diary not found.');
+
         // Check if there is a pending workflow request
         $db = \Config\Database::connect();
         $req = $db->table('fs_approval_requests')
@@ -172,17 +180,40 @@ class SiteDiary extends BaseAppController
         if ($req) {
             $workflow = new \App\Services\WorkflowEngine();
             $workflow->processAction($req['id'], $this->currentUser['id'], 'approved', 'Manual approval from diary view.');
-            return redirect()->back()->with('success', 'Diary approved via workflow.');
+        } else {
+            $sdModel->update($diaryId, [
+                'status'      => 'Approved',
+                'approved_by' => $this->currentUser['id'],
+                'approved_at' => date('Y-m-d H:i:s'),
+            ]);
         }
 
-        // Fallback for direct approval if no workflow
-        $sdModel = new SiteDiaryModel();
-        $sdModel->update($diaryId, [
-            'status'      => 'Approved',
-            'approved_by' => $this->currentUser['id'],
-            'approved_at' => date('Y-m-d H:i:s'),
-        ]);
-        return redirect()->back()->with('success', 'Diary approved directly.');
+        // --- NEW: Update BOQ Production Quantities ---
+        $this->updateBoqProduction($diaryId);
+
+        return redirect()->back()->with('success', 'Diary approved and production quantities updated.');
+    }
+
+    /**
+     * Update BOQ actual quantities based on approved diary line items.
+     */
+    protected function updateBoqProduction(int $diaryId): void
+    {
+        $items = (new SiteDiaryItemModel())->where('diary_id', $diaryId)->findAll();
+        $boqModel = new \App\Models\BOQItemModel();
+
+        foreach ($items as $item) {
+            if ($item['boq_item_id'] && $item['quantity_done'] > 0) {
+                $boqItem = $boqModel->find($item['boq_item_id']);
+                if ($boqItem) {
+                    $newQty = (float)$boqItem['actual_qty'] + (float)$item['quantity_done'];
+                    $boqModel->update($item['boq_item_id'], [
+                        'actual_qty'    => $newQty,
+                        'actual_amount' => $newQty * (float)$boqItem['unit_rate']
+                    ]);
+                }
+            }
+        }
     }
 
     /**
@@ -194,15 +225,19 @@ class SiteDiary extends BaseAppController
         $types     = $this->request->getPost('item_type')        ?? [];
         $descs     = $this->request->getPost('item_description') ?? [];
         $areaIds   = $this->request->getPost('item_area_id')     ?? [];
+        $boqIds    = $this->request->getPost('item_boq_item_id')  ?? [];
+        $qtyDone   = $this->request->getPost('item_quantity_done')?? [];
 
         foreach ($descs as $i => $desc) {
             if (empty(trim((string)$desc))) continue;
             $itemModel->insert([
-                'diary_id'    => $diaryId,
-                'type'        => $types[$i]    ?? 'progress',
-                'description' => $desc,
-                'area_id'     => ($areaIds[$i] ?? null) ?: null,
-                'sort_order'  => $i,
+                'diary_id'      => $diaryId,
+                'type'          => $types[$i]    ?? 'progress',
+                'description'   => $desc,
+                'area_id'       => ($areaIds[$i] ?? null) ?: null,
+                'boq_item_id'   => ($boqIds[$i]  ?? null) ?: null,
+                'quantity_done' => ($qtyDone[$i] ?? 0),
+                'sort_order'    => $i,
             ]);
         }
     }

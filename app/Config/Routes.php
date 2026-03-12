@@ -56,10 +56,20 @@ $routes->get('vendor/apply/success', 'VendorApply::success');
 
 $routes->get('dashboard', 'Dashboard::index', ['filter' => 'auth']);
 
-$routes->get('auth/password/forgot', 'Auth::forgotPassword');
-$routes->post('auth/password/forgot', 'Auth::sendResetLink');
-$routes->get('auth/password/reset/(:segment)', 'Auth::resetPassword/$1');
-$routes->post('auth/password/reset', 'Auth::doResetPassword');
+$routes->group('auth', function($routes) {
+    $routes->get('signin',            'Auth::signin');
+    $routes->post('signin',           'Auth::attemptSignin');
+    $routes->post('signout',          'Auth::signout'); // Changed from get to post based on original
+
+    // MFA Routes
+    $routes->get('mfa-verify',        'Auth::mfaVerify');
+    $routes->post('mfa-verify',       'Auth::doVerifyMfa');
+
+    $routes->get('password/forgot',   'Auth::forgotPassword');
+    $routes->post('password/forgot',  'Auth::sendResetLink');
+    $routes->get('password/reset/(:any)', 'Auth::resetPassword/$1');
+    $routes->post('password/reset',   'Auth::doResetPassword');
+});
 
 // $routes->get('approval/requests', 'Approval::index');
 // $routes->get('approval/requests/(:num)', 'Approval::view/$1');
@@ -84,6 +94,13 @@ $routes->group('roles', ['filter' => 'permission:manage_roles'], function ($rout
 // Settings
 $routes->group('settings', ['filter' => 'permission:manage_settings'], function ($routes) {
     $routes->get('/', 'Settings::index');
+
+    // ── Cybersecurity ─────────────────────────────────────────────────
+    $routes->get('security',                         'Settings::security');
+    $routes->get('security_log_data',                'Settings::security_log_data');
+    $routes->post('setup_mfa',                       'Settings::setup_mfa');
+    $routes->post('verify_mfa_setup',                'Settings::verify_mfa_setup');
+    $routes->post('disable_mfa',                     'Settings::disable_mfa');
 
     // ── Core ──────────────────────────────────────────────────────────
     $routes->get('general',                          'Settings::general');
@@ -243,7 +260,7 @@ $routes->group('approvals', ['filter' => 'auth'], function ($routes) {
 });
 
 // ── Change Management ────────────────────────────────────────────────────────
-$routes->group('change-orders', ['filter' => 'auth'], function ($routes) {
+$routes->group('change-orders', ['filter' => 'permission:view_production_control'], function ($routes) {
     $routes->post('events/store/(:num)', 'ChangeOrders::storeEvent/$1');
     $routes->post('convert/(:num)',      'ChangeOrders::convertToCO/$1');
     $routes->post('approve/(:num)',      'ChangeOrders::approveCO/$1');
@@ -336,8 +353,26 @@ $routes->post('contracts/(:num)/delete',         'Contracts::delete/$1',  ['filt
 $routes->post('milestones/(:num)/update',        'Projects::updateMilestone/$1', ['filter' => 'auth']);
 
 // ── Gantt ───────────────────────────────────────────────────────────────────
-$routes->get('projects/(:num)/gantt/data',       'Gantt::data/$1',        ['filter' => 'auth']);
-$routes->post('tasks/(:num)/gantt-update',        'Gantt::updateDates/$1', ['filter' => 'auth']);
+$routes->group('gantt', ['filter' => 'permission:manage_p6_scheduler'], function ($routes) {
+    $routes->get('projects/(:num)/data',       'Gantt::data/$1');
+    $routes->post('projects/(:num)/import',     'Gantt::importXer/$1');
+    $routes->post('projects/(:num)/recalculate','Gantt::recalculate/$1');
+    $routes->post('tasks/(:num)/update',       'Gantt::updateDates/$1');
+});
+
+// ── Procurement & Precon ────────────────────────────────────────────────────
+$routes->group('procurement', ['filter' => 'permission:manage_preconstruction'], function ($routes) {
+    $routes->get('projects/(:num)',       'Procurement::index/$1');
+    $routes->post('projects/(:num)/save', 'Procurement::saveItem/$1');
+    $routes->get('projects/(:num)/bid-leveling',      'Procurement::bidLeveling/$1');
+});
+
+// ── Handover & Quality ──────────────────────────────────────────────────────
+$routes->group('handover', ['filter' => 'permission:manage_handover_qc'], function ($routes) {
+    $routes->post('projects/(:num)/save',    'Handover::saveAsset/$1');
+    $routes->get('projects/(:num)/print-qr', 'Handover::printQr/$1');
+});
+$routes->post('tasks/(:num)/qa-toggle',           'Tasks::qaToggle/$1',        ['filter' => 'auth']);
 
 // ── Timesheets ──────────────────────────────────────────────────────────────
 $routes->group('timesheets', ['filter' => 'auth'], function ($routes) {

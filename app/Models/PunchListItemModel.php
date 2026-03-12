@@ -11,7 +11,7 @@ class PunchListItemModel extends ErpModel
     protected $allowedFields  = [
         'project_id','tenant_id','branch_id','area_id','task_id','item_number','title','description',
         'trade','status','priority','reported_by','assigned_to','due_date',
-        'resolved_at','closed_at',
+        'resolved_at','closed_at','latitude','longitude','photo_path'
     ];
 
     public function forProject(int $projectId, string $status = ''): array

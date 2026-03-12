@@ -39,6 +39,13 @@ $moduleGroups = [
         ['key'=>'module_message',      'label'=>'Messaging',      'icon'=>'fa-comments',      'desc'=>'Internal team messaging'],
         ['key'=>'module_announcement', 'label'=>'Announcements',  'icon'=>'fa-bullhorn',      'desc'=>'Company-wide announcements'],
     ],
+    'Construction & Controls' => [
+        ['key'=>'module_production_control',      'label'=>'Production & Control',       'icon'=>'fa-gauge-high',    'desc'=>'Real-time project control and EVM'],
+        ['key'=>'module_p6_scheduler',             'label'=>'P6 Scheduler',              'icon'=>'fa-chart-gantt',   'desc'=>'Advanced Primavera P6 style scheduling'],
+        ['key'=>'module_preconstruction',          'label'=>'Preconstruction',           'icon'=>'fa-clipboard-list','desc'=>'Intelligent procurement and bid leveling'],
+        ['key'=>'module_handover_qc',              'label'=>'Handover & QC',             'icon'=>'fa-vault',         'desc'=>'Digital handover and quality control'],
+        ['key'=>'module_cybersecurity_hardening',  'label'=>'Cybersecurity Hardening',   'icon'=>'fa-shield-halved', 'desc'=>'Advanced MFA and security logging'],
+    ],
     'Other' => [
         ['key'=>'module_timeline',       'label'=>'Activity Timeline','icon'=>'fa-timeline',       'desc'=>'Activity and audit timeline'],
         ['key'=>'module_knowledge_base', 'label'=>'Knowledge Base',   'icon'=>'fa-book-open',      'desc'=>'Internal knowledge base articles'],

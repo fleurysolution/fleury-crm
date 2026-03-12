@@ -11,7 +11,7 @@ class ProjectExpenseModel extends ErpModel
     protected $useTimestamps  = true;
     protected $useSoftDeletes = true;
     protected $allowedFields  = [
-        'tenant_id','branch_id','project_id','cost_code_id','category','description','amount','currency',
+        'tenant_id','branch_id','project_id','cost_code_id', 'task_id', 'area_id', 'category','description','amount','currency',
         'expense_date','vendor','receipt_path','status','submitted_by','approved_by','approved_at',
     ];
 

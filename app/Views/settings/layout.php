@@ -43,6 +43,7 @@
                         ['tab'=>'notifications',     'icon'=>'fa-bell',            'label'=>'Notifications',       'url'=>'settings/notifications'],
                     ],
                     'Security & Access' => [
+                        ['tab'=>'security',           'icon'=>'fa-shield-halved',   'label'=>'Cybersecurity',       'url'=>'settings/security'],
                         ['tab'=>'ip_restriction',    'icon'=>'fa-ban',             'label'=>'IP Restriction',      'url'=>'settings/ip_restriction'],
                         ['tab'=>'client_permissions','icon'=>'fa-user-lock',       'label'=>'Client Permissions',  'url'=>'settings/client_permissions'],
                         ['tab'=>'gdpr',              'icon'=>'fa-shield-halved',   'label'=>'GDPR',                'url'=>'settings/gdpr'],

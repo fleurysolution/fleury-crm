@@ -35,7 +35,29 @@ class AuthService
 
         $user = $this->users->where('email', $email)->where('deleted_at', null)->first();
 
-        if (!$user || !password_verify($password, (string) $user['password_hash'])) {
+        if (!$user) {
+            return ['success' => false, 'errors' => ['Invalid email or password.']];
+        }
+
+        // 1. Check for Account Lock
+        if ($user['locked_until'] && strtotime((string)$user['locked_until']) > time()) {
+            \App\Models\SecurityLogModel::record($user['id'], 'account_lock_check', 'medium', "Locked account attempt: $email", ['ip' => $ip]);
+            return ['success' => false, 'errors' => ['Account is locked due to multiple failed attempts. Please try again later.']];
+        }
+
+        // 2. Verify Password
+        if (!password_verify($password, (string) $user['password_hash'])) {
+            $attempts = (int)($user['login_attempts'] ?? 0) + 1;
+            $update = ['login_attempts' => $attempts];
+            
+            if ($attempts >= 5) {
+                $update['locked_until'] = date('Y-m-d H:i:s', time() + 900); // 15 mins
+                \App\Models\SecurityLogModel::record($user['id'], 'account_locked', 'high', "Account locked for $email after 5 attempts", ['ip' => $ip]);
+            } else {
+                \App\Models\SecurityLogModel::record($user['id'], 'login_failed', 'medium', "Failed login for $email (Attempt $attempts)", ['ip' => $ip]);
+            }
+            
+            $this->users->update((int)$user['id'], $update);
             return ['success' => false, 'errors' => ['Invalid email or password.']];
         }
 
@@ -43,13 +65,38 @@ class AuthService
             return ['success' => false, 'errors' => ['Your account is not active.']];
         }
 
+        // 3. Successful Credential Verification
+        $this->users->update((int)$user['id'], [
+            'login_attempts' => 0,
+            'locked_until'   => null,
+            'last_ip_address' => $ip,
+            'last_login_at'  => date('Y-m-d H:i:s')
+        ]);
+
+        \App\Models\SecurityLogModel::record($user['id'], 'login_success', 'low', "Successful credentials for $email", ['ip' => $ip]);
+
+        // 4. Check for MFA
+        if ($user['mfa_enabled']) {
+            // Initiate MFA flow - don't log in yet
+            session()->set('mfa_user_id', (int)$user['id']);
+            return ['success' => true, 'mfa_required' => true];
+        }
+
+        // 5. Complete Login (No MFA)
+        $this->completeLogin($user);
+        return ['success' => true];
+    }
+
+    /**
+     * Complete the session setup and regeneration.
+     */
+    protected function completeLogin(array $user): void
+    {
         session()->regenerate(true);
 
-        // Fetch User Roles & Permissions
         $roles = $this->users->getRoles((int) $user['id']);
         $permissions = $this->users->getPermissions((int) $user['id']);
 
-        // Flatten permissions to simple array of slugs
         $permissionSlugs = array_column($permissions, 'slug');
         $roleSlugs = array_column($roles, 'slug');
 
@@ -60,8 +107,8 @@ class AuthService
             'user_roles'               => $roleSlugs,
             'user_permissions'         => $permissionSlugs,
             'is_logged_in'             => true,
+            'last_activity'            => time(),
             
-            // Full ABAC context
             'tenant_id'                => $user['tenant_id'] ?? null,
             'branch_id'                => $user['branch_id'] ?? null,
             'department_id'            => $user['department_id'] ?? null,
@@ -72,10 +119,30 @@ class AuthService
             'tax_profile_id'           => $user['tax_profile_id'] ?? null,
             'employment_type'          => $user['employment_type'] ?? null,
         ]);
+        
+        // Clear MFA state if any
+        session()->remove('mfa_user_id');
+    }
 
-        $this->users->update((int)$user['id'], ['last_login_at' => date('Y-m-d H:i:s')]);
+    /**
+     * Finalize MFA verification.
+     */
+    public function verifyMfa(int $userId, string $code): array
+    {
+        $user = $this->users->find($userId);
+        if (!$user || !$user['mfa_secret']) {
+            return ['success' => false, 'errors' => ['MFA is not configured.']];
+        }
 
-        return ['success' => true];
+        $mfa = new MfaService();
+        if ($mfa->verifyCode($user['mfa_secret'], $code)) {
+            $this->completeLogin($user);
+            \App\Models\SecurityLogModel::record($userId, 'mfa_success', 'low', "MFA verification successful for {$user['email']}");
+            return ['success' => true];
+        }
+
+        \App\Models\SecurityLogModel::record($userId, 'mfa_failed', 'high', "Failed MFA attempt for {$user['email']}");
+        return ['success' => false, 'errors' => ['Invalid MFA code.']];
     }
 
     public function signout(): void

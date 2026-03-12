@@ -4,7 +4,7 @@ class PhaseModel extends Model {
     protected $table         = 'wbs_phases';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
-    protected $allowedFields = ['project_id','title','color','sort_order'];
+    protected $allowedFields = ['project_id','parent_id','title','color','sort_order'];
     public function forProject(int $id): array {
         return $this->where('project_id', $id)->orderBy('sort_order')->findAll();
     }

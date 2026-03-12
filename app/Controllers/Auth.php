@@ -36,6 +36,56 @@ class Auth extends BaseController
                 ->with('errors', $result['errors']);
         }
 
+        // Handle MFA Requirement
+        if (isset($result['mfa_required']) && $result['mfa_required']) {
+            return redirect()->to(site_url('auth/mfa-verify'));
+        }
+
+        return $this->handlePostLoginRedirect();
+    }
+
+    /**
+     * MFA Verification View
+     */
+    public function mfaVerify()
+    {
+        if (!session()->get('mfa_user_id')) {
+            return redirect()->to(site_url('auth/signin'));
+        }
+
+        return view('auth/mfa_verify', [
+            'title'  => 'MFA Verification',
+            'errors' => session()->getFlashdata('errors') ?? [],
+        ]);
+    }
+
+    /**
+     * Process MFA Code
+     */
+    public function doVerifyMfa(): RedirectResponse
+    {
+        $userId = session()->get('mfa_user_id');
+        $code   = trim((string)$this->request->getPost('mfa_code'));
+
+        if (!$userId) {
+            return redirect()->to(site_url('auth/signin'));
+        }
+
+        $result = $this->authService->verifyMfa((int)$userId, $code);
+
+        if (!$result['success']) {
+            return redirect()->to(site_url('auth/mfa-verify'))
+                ->with('errors', $result['errors']);
+        }
+
+        return $this->handlePostLoginRedirect();
+    }
+
+    /**
+     * Logic to redirect based on user role
+     */
+    protected function handlePostLoginRedirect(): RedirectResponse
+    {
         $roles = session()->get('user_roles') ?? [];
         if (in_array('subcontractor_vendor', $roles) && count($roles) === 1) {
             return redirect()->to(site_url('vendor-portal/dashboard'));

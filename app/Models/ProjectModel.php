@@ -12,6 +12,7 @@ class ProjectModel extends ErpModel
     protected $useTimestamps  = true;
     protected $allowedFields  = [
         'title', 'tenant_id', 'branch_id', 'client_id', 'pm_user_id', 'status', 'project_stage', 'priority',
+        'sector', 'total_floors', 'site_acreage', 'gross_sqft', 'duration_months', 'labor_productivity_factor', 'standard_owner_id',
         'start_date', 'end_date', 'budget', 'contract_type', 'versioned_budget_baseline', 'currency', 'description',
         'region_id', 'office_id', 'color', 'created_by',
         'latitude', 'longitude', 'geofence_radius'
